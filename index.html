@@ -1,0 +1,1551 @@
+<!-- Chosen Palette: Island Breeze (bg-amber-50, text-cyan-800, primary-cyan-600, accent-amber-500) -->
+<!-- Application Structure Plan: 採用頂部固定導覽列 (Header) 搭配多個內容區塊 (Section) 的單頁應用程式 (SPA) 架構。導覽列包含「行程總覽」、「交通住宿」、「每日行程」、「美食地圖」和「行前準備」，點擊後可平滑滾動並顯示對應區塊 (page-section)。
+1. 行程總覽: 提供日期、預算、住宿等關鍵資訊卡片，讓使用者一目了然。
+2. 交通住宿: 結構化呈現三種交通方案 (高鐵、台鐵、開車) 的比較，並使用 Chart.js 柱狀圖視覺化「時間」與「花費」的對比，幫助使用者決策。下方清楚列出船班、島上交通與住宿資訊。
+3. 每日行程: 這是核心。使用「頁籤 (Tabs)」結構(Day 1-4)來分隔每日內容，避免頁面過長。每日行程以「垂直時間軸 (Timeline)」呈現，每個時間點都是一張卡片，包含時間、活動、地圖連結。
+4. 美食地圖: 採用響應式網格 (Grid) 展示推薦美食，並提供「分類篩選按鈕」(海鮮、小吃、甜點)，透過 JavaScript 實現即時篩選互動。
+5. 行前準備: 以清單 (Checklist) 形式提供打包建議。
+- 核心互動 (1): 導覽列切換。
+- 核心互動 (2): 美食地圖篩選。
+- 核心互動 (3): 每日行程的「編輯」、「刪除」和「新增」功能。這是最強的互動點，使用者可點擊「編輯」將卡片內容轉為輸入框，修改後「儲存」；或「刪除」整張卡片；或點擊「新增行程」按鈕彈出 Modal 視窗來新增卡片。
+- 選擇此架構是為了將複雜的旅遊資訊拆解成清晰、易於管理的區塊，並透過互動功能 (特別是行程編輯) 賦予使用者最大的彈性，符合「年輕人愛玩」的客製化與高互動性需求。 -->
+<!-- Visualization & Content Choices:
+1. 交通方案比較:
+   - 資訊: 台北至東港的三種交通方式 (高鐵、台鐵、開車)。
+   - 目標: 比較「總花費」與「總時長」。
+   - 呈現: Chart.js 柱狀圖 (Bar Chart)。
+   - 互動: 鼠標懸停 (Hover) 顯示 Tooltip，展示精確數值。
+   - 理由: 柱狀圖最能直觀對比不同類別的數值 (花費 vs. 時間)，符合使用者快速決策的需求。
+2. 每日行程:
+   - 資訊: 使用者提供的詳細行程表。
+   - 目標: 清晰、依時序展示活動，並提供地點指引。
+   - 呈現: 垂直時間軸 (HTML/CSS)。每個項目是一張卡片，包含時間、標題、描述、地圖連結。
+   - 互動: (A) 點擊 Google Maps 連結 (<a>)。 (B) 編輯/儲存功能 (JS切換 input/text)。 (C) 刪除功能 (JS 移除 DOM)。 (D) 新增功能 (JS Modal 表單 + DOM 插入)。
+   - 理由: 時間軸符合行程的時序性。卡片化+編輯功能提供了極高的客製化彈性，遠勝靜態列表。
+3. 美食地圖:
+   - 資訊:  researched 小琉球熱門餐廳 (海鮮、小吃、甜點)。
+   - 目標: 組織化展示美食點，並提供地點指引與分類。
+   - 呈現: 響應式卡片網格 (Tailwind Grid)。
+   - 互動: 點擊分類按鈕 (JS 切換 'hidden' class) 進行篩選。
+   - 理由: 卡片網格視覺上吸引人，分類篩選是 SPA 互動性的基本要求，提升可用性。
+4. 住宿/船班/租車:
+   - 資訊: 住宿地址、交通細節。
+   - 目標: 清楚傳達靜態但重要的資訊。
+   - 呈現: 結構化的 HTML 列表 (<ul>/<li>) 和卡片 (<div>)。
+   - 互動: 點擊 Google Maps 連結。
+   - 理由: 對於靜態資訊，清晰的排版優於複雜的視覺化。
+- (確認: 所有圖表均使用 Chart.js Canvas，所有圖示/排版均使用 HTML/Tailwind/Unicode，無 SVG，無 Mermaid.js) -->
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小琉球4天3夜客製化行程</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        }
+        .page-section {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        .page-section.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .nav-link {
+            @apply px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-cyan-100 hover:text-cyan-800 cursor-pointer;
+        }
+        .nav-link.active {
+            @apply bg-cyan-600 text-white hover:bg-cyan-700;
+        }
+        /* Tabs styling */
+        #day-tabs {
+            display: flex;
+            gap: 0.5rem;
+            align-items: stretch;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 0.5rem;
+        }
+        .tab-button {
+            @apply px-4 py-2 font-medium text-gray-600 rounded-t-lg hover:bg-gray-200;
+            background-clip: padding-box;
+            border: 1px solid transparent;
+            white-space: nowrap;
+            flex: 0 0 auto;
+        }
+        .tab-button.active {
+            @apply bg-white text-cyan-600;
+            border-bottom: 3px solid #06b6d4; /* cyan-500 */
+        }
+        .tab-button:focus {
+            outline: 3px solid rgba(6,182,212,0.18);
+            outline-offset: 2px;
+        }
+        /* Hide default focus ring for mouse users but keep it for keyboard users */
+        .tab-button:not(:focus-visible) {
+            outline: none;
+        }
+        .day-content {
+            display: none;
+        }
+        /* Make tabs appear as independent blocks on medium+ screens */
+        @media (min-width: 768px) {
+            #day-tabs {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 0.75rem;
+            }
+            .tab-button {
+                display: block;
+                width: 100%;
+                text-align: center;
+                border-radius: 0.5rem;
+                background-color: white;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+                border: 1px solid #e5e7eb;
+            }
+            .tab-button.active {
+                background-color: #ecfeff; /* subtle cyan */
+                border-color: #06b6d4;
+                box-shadow: 0 2px 6px rgba(6,182,212,0.06);
+            }
+        }
+        .day-content.active {
+            display: block;
+        }
+        .timeline-container {
+            position: relative;
+            padding-left: 2.5rem; 
+        }
+        .timeline-container::before {
+            content: '';
+            position: absolute;
+            left: 1.25rem;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: #e0e0e0; 
+            border-radius: 2px;
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 1.5rem; 
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2.0rem; 
+            top: 0.5rem; 
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            background-color: #06b6d4; 
+            border: 2px solid white;
+            z-index: 10;
+        }
+        .filter-button {
+            @apply px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2;
+        }
+        .filter-button.active {
+            @apply bg-cyan-600 text-white border-cyan-600 hover:bg-cyan-700;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .chart-container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 600px; 
+            margin-left: auto; 
+            margin-right: auto; 
+            height: 300px;
+            max-height: 400px; 
+        }
+        @media (min-width: 768px) { 
+            .chart-container { 
+                height: 350px; 
+            } 
+        }
+    </style>
+</head>
+<body class="bg-amber-50 text-gray-800">
+
+    <!-- Header / Navigation -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0">
+                    <h1 class="text-xl font-bold text-cyan-700">🏝️ 小琉球4日遊</h1>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4" id="nav-links">
+                        <a class="nav-link active" data-target="overview">行程總覽</a>
+                        <a class="nav-link" data-target="transport">交通住宿</a>
+                        <a class="nav-link" data-target="itinerary">每日行程</a>
+                        <a class="nav-link" data-target="food">美食地圖</a>
+                        <a class="nav-link" data-target="prep">行前準備</a>
+                    </div>
+                </div>
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                        <span class="sr-only">Open main menu</span>
+                        <span class="text-2xl">☰</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+        <!-- Mobile menu, show/hide based on menu state. -->
+        <div class="md:hidden hidden" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3" id="mobile-nav-links">
+                <a class="nav-link active block" data-target="overview">行程總覽</a>
+                <a class="nav-link block" data-target="transport">交通住宿</a>
+                <a class="nav-link block" data-target="itinerary">每日行程</a>
+                <a class="nav-link block" data-target="food">美食地圖</a>
+                <a class="nav-link block" data-target="prep">行前準備</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-7xl">
+
+        <!-- Section 1: Overview -->
+        <section id="overview" class="page-section active">
+            <h2 class="text-3xl font-bold text-cyan-800 mb-6">行程總覽：小琉球 4 天 3 夜探險</h2>
+            <p class="text-lg text-gray-700 mb-8">
+                這是一份專為年輕人設計的客製化行程，結合了水上活動、環島探險、美食打卡與夜間生態。準備好迎接一個充滿活力的小島假期吧！
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-cyan-700 mb-3">📅 旅遊日期</h3>
+                    <p class="text-gray-600">2026年 1月 17日 (六)</p>
+                    <p class="text-gray-600">至 2026年 1月 20日 (二)</p>
+                    <p class="text-gray-600 font-medium mt-2">共 4 天 3 夜</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-cyan-700 mb-3">🏨 住宿資訊</h3>
+                    <p class="text-gray-600 font-medium">老船長特色民宿</p>
+                    <p class="text-gray-600 text-sm">929屏東縣琉球鄉相埔路87-7號</p>
+                    <a href="https://www.google.com/maps/search/?api=1&query=929屏東縣琉球鄉相埔路87-7號" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-2 inline-block">
+                        在 Google Maps 上查看 ↗
+                    </a>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-cyan-700 mb-3">💰 旅遊預算</h3>
+                    <p class="text-gray-600">總預算 (每人)</p>
+                    <div class="flex items-center space-x-3">
+                        <p id="budget-display" class="text-3xl font-bold text-cyan-800 mb-0">NT$ 15,000</p>
+                        <input id="budget-input" type="number" class="hidden border rounded px-3 py-1 text-lg" min="0">
+                        <button id="budget-edit" class="ml-2 bg-amber-200 text-amber-800 px-3 py-1 rounded">編輯</button>
+                        <button id="budget-save" class="ml-2 hidden bg-cyan-600 text-white px-3 py-1 rounded">儲存</button>
+                        <button id="budget-cancel" class="ml-2 hidden bg-gray-200 text-gray-800 px-3 py-1 rounded">取消</button>
+                    </div>
+                    <p class="text-gray-500 text-sm mt-2">包含交通、住宿、餐食、活動與租車</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Transport & Accommodation -->
+        <section id="transport" class="page-section hidden">
+            <h2 class="text-3xl font-bold text-cyan-800 mb-6">交通與住宿詳情</h2>
+            
+            <!-- Part 1: Taipei -> Donggang -->
+            <div class="bg-white p-6 rounded-lg shadow-lg mb-8">
+                <h3 class="text-2xl font-semibold text-cyan-700 mb-4">第一階段：台北南港 → 東港漁港</h3>
+                <p class="text-gray-700 mb-6">我們比較了三種主要的交通方式，您可以根據時間與預算考量來選擇。圖表顯示了預估的「總時長」與「單人總花費」。</p>
+                <div class="chart-container mb-6">
+                    <canvas id="transportChart"></canvas>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <h4 class="font-bold text-lg text-cyan-800">🚄 方案一：高鐵 (最快)</h4>
+                        <p><strong>路線：</strong>高鐵南港站 → 高鐵左營站</p>
+                        <p><strong>交通：</strong>(約 1.5 - 2 小時, $1530)</p>
+                        <p><strong>轉乘：</strong>於左營站搭乘計程車或「墾丁快線」客運至東港漁港 (約 45-60 分鐘, $300-$400)</p>
+                        <p class="font-semibold mt-2"><strong>總計：</strong>約 3 - 3.5 小時 | $1800 - $1950</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-lg text-cyan-800">🚆 方案二：台鐵 (經濟)</h4>
+                        <p><strong>路線：</strong>台鐵南港站 → 台鐵高雄站</p>
+                        <p><strong>交通：</strong>(普悠瑪/自強, 約 4 - 5 小時, $845 - $891)</p>
+                        <p><strong>轉乘：</strong>於高雄車站搭乘客運 (高雄客運) 或共乘計程車至東港漁港 (約 60 分鐘, $150 - $300)</p>
+                        <p class="font-semibold mt-2"><strong>總計：</strong>約 5 - 6 小時 | $1000 - $1200</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-lg text-cyan-800">🚗 方案三：自行開車 (彈性)</h4>
+                        <p><strong>路線：</strong>國道1號 → 88快速道路 → 國道3號 → 林邊交流道 → 東港</p>
+                        <p><strong>交通：</strong>(約 4.5 - 5.5 小時)</p>
+                        <p><strong>轉乘：</strong>需在東港漁港附近尋找收費停車場 (過夜停車約 $200-$300/天)</p>
+                        <p class="font-semibold mt-2"><strong>總計：</strong>約 5 - 6 小時 | $1500 (油資過路費) + $900 (停車)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Part 2: Donggang -> Liuqiu -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-cyan-700 mb-3">第二階段：東港 ⇌ 小琉球</h3>
+                    <p class="text-gray-600"><strong>交通：</strong>民營交通船 (推薦：東琉線、泰富)</p>
+                    <p class="text-gray-600"><strong>航程：</strong>約 25 - 30 分鐘</p>
+                    <p class="text-gray-600"><strong>票價：</strong>來回票約 $410</p>
+                    <p class="text-gray-600 font-medium mt-2"><strong>建議：</strong>提早線上預訂船票，並搭乘 11:30 前的船班登島。</p>
+                    <a href="https://www.google.com/maps/search/?api=1&query=東港漁港" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-2 inline-block">
+                        查看東港漁港位置 ↗
+                    </a>
+                </div>
+                <!-- Part 3: Island Transport -->
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-cyan-700 mb-3">第三階段：島上交通</h3>
+                    <p class="text-gray-600"><strong>交通：</strong>租賃機車</p>
+                    <p class="text-gray-600"><strong>期間：</strong>4 天 3 夜 (依使用者需求)</p>
+                    <p class="text-gray-600"><strong>費用：</strong>約 $500 - $700 (三天兩夜價，第四天需洽詢)</p>
+                    <p class="text-gray-600 font-medium mt-2"><strong>備註：</strong>登島後在白沙尾碼頭有許多租車行，可先預訂或現場租借。</p>
+                </div>
+                <!-- Part 4: Accommodation -->
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-cyan-700 mb-3">住宿資訊</h3>
+                    <p class="text-gray-600 font-medium">老船長特色民宿</p>
+                    <p class="text-gray-600">929屏東縣琉球鄉相埔路87-7號</p>
+                    <p class="text-gray-600 font-medium mt-2"><strong>提醒：</strong>請務必提前與民宿確認廚房使用規定，以便安排 Day 1 晚上的火鍋夜。</p>
+                    <a href="https://www.google.com/maps/search/?api=1&query=929屏東縣琉球鄉相埔路87-7號" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-2 inline-block">
+                        在 Google Maps 上查看 ↗
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Daily Itinerary -->
+        <section id="itinerary" class="page-section hidden">
+            <h2 class="text-3xl font-bold text-cyan-800 mb-4">每日行程 (可編輯)</h2>
+            <p class="text-gray-700 mb-6">
+                這是為您規劃的詳細行程。您可以點擊「編輯」按鈕來修改內容，或「刪除」不需要的項目，也可以在每天的最後「新增行程」。
+            </p>
+            
+            <!-- Day Tabs -->
+            <div class="bg-gray-100 rounded-t-lg">
+                <nav class="flex space-x-1" id="day-tabs">
+                    <button class="tab-button active" data-day="day1">Day 1：登島與水上時光</button>
+                    <button class="tab-button" data-day="day2">Day 2：環島與日落</button>
+                    <button class="tab-button" data-day="day3">Day 3：日出與深度探索</button>
+                    <button class="tab-button" data-day="day4">Day 4：伴手禮與賦歸</button>
+                </nav>
+            </div>
+
+            <div class="bg-white p-6 rounded-b-lg shadow-lg">
+                <!-- Day 1 Content -->
+                <div id="day1-content" class="day-content active">
+                    <div class="timeline-container">
+                        <!-- Item 1.1 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">09:00 - 11:30</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="09:00 - 11:30">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">啟程</h4>
+                                    <p class="details-display text-gray-600">從出發地前往東港漁港。建議搭乘 11:30 前的船班。</p>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=東港漁港" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">
+                                        導航至東港漁港 ↗
+                                    </a>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="啟程">
+                                    <textarea class="details-edit form-input w-full">從出發地前往東港漁港。建議搭乘 11:30 前的船班。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="https://www.google.com/maps/search/?api=1&query=東港漁港">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 1.2 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">12:00 - 13:30</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="12:00 - 13:30">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">登島與午餐</h4>
+                                    <p class="details-display text-gray-600">抵達白沙尾碼頭 → 領機車 → 在碼頭附近享用在地午餐 (如：相思麵)。</p>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=小琉球白沙尾碼頭" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">
+                                        查看白沙尾碼頭 ↗
+                                    </a>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="登島與午餐">
+                                    <textarea class="details-edit form-input w-full">抵達白沙尾碼頭 → 領機車 → 在碼頭附近享用在地午餐 (如：相思麵)。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="https://www.google.com/maps/search/?api=1&query=小琉球白沙尾碼頭">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 1.3 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">13:30 - 14:30</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="13:30 - 14:30">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">Check-in 與採買</h4>
+                                    <p class="details-display text-gray-600">抵達「老船長民宿」Check-in → 騎車至琉球市區採買火鍋食材。</p>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=929屏東縣琉球鄉相埔路87-7號" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">
+                                        導航至民宿 ↗
+                                    </a>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="Check-in 與採買">
+                                    <textarea class="details-edit form-input w-full">抵達「老船長民宿」Check-in → 騎車至琉球市區採買火鍋食材。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="https://www.google.com/maps/search/?api=1&query=929屏東縣琉球鄉相埔路87-7號">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 1.4 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">14:30 - 18:00</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="14:30 - 18:00">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">🌊 彈性水上活動 (首選)</h4>
+                                    <p class="details-display text-gray-600">【黃金時段 15:00-18:00】 浮潛 (看海龜) / 深潛 或 SUP 立槳 (可報名夕陽團)。</p>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=小琉球+浮潛" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">
+                                        搜尋水上活動店家 ↗
+                                    </a>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="🌊 彈性水上活動 (首選)">
+                                    <textarea class="details-edit form-input w-full">【黃金時段 15:00-18:00】 浮潛 (看海龜) / 深潛 或 SUP 立槳 (可報名夕陽團)。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="https://www.google.com/maps/search/?api=1&query=小琉球+浮潛">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 1.5 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">18:30 - 21:00</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="18:30 - 21:00">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">🏠 歡樂火鍋夜</h4>
+                                    <p class="details-display text-gray-600">在民宿煮火鍋、聚餐。【重要：請務必與民宿確認廚房使用規定】</p>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="🏠 歡樂火鍋夜">
+                                    <textarea class="details-edit form-input w-full">在民宿煮火鍋、聚餐。【重要：請務必與民宿確認廚房使用規定】</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 1.6 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">21:00 - 23:00</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="21:00 - 23:00">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">唱歌與娛樂</h4>
+                                    <p class="details-display text-gray-600">飯後在民宿公共空間唱歌或玩桌遊。</p>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="唱歌與娛樂">
+                                    <textarea class="details-edit form-input w-full">飯後在民宿公共空間唱歌或玩桌遊。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Add Item Button -->
+                        <div class="text-center mt-6">
+                            <button class="add-item-btn bg-cyan-600 text-white px-4 py-2 rounded-md hover:bg-cyan-700" data-day="day1">＋ 新增行程</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 2 Content -->
+                <div id="day2-content" class="day-content hidden">
+                    <div class="timeline-container">
+                        <!-- Item 2.1 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">08:00 - 10:30</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="08:00 - 10:30">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">🌊 彈性水上活動 (備案)</h4>
+                                    <p class="details-display text-gray-600">【黃金時段 08:00-11:00】 浮潛/深潛 或 透明獨木舟。若 Day 1 已玩，此時段可改為悠閒吃早餐 (如：洪媽媽早餐店)。</p>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=小琉球+透明獨木舟" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">
+                                        搜尋透明獨木舟 ↗
+                                    </a>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="🌊 彈性水上活動 (備案)">
+                                    <textarea class="details-edit form-input w-full">【黃金時段 08:00-11:00】 浮潛/深潛 或 透明獨木舟。若 Day 1 已玩，此時段可改為悠閒吃早餐 (如：洪媽媽早餐店)。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="https://www.google.com/maps/search/?api=1&query=小琉球+透明獨木舟">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 2.2 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">10:30 - 12:30</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="10:30 - 12:30">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">午餐與機動調整</h4>
+                                    <p class="details-display text-gray-600">享用午餐。若 Day 2 上午水活，午餐後開始環島。</p>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="午餐與機動調整">
+                                    <textarea class="details-edit form-input w-full">享用午餐。若 Day 2 上午水活，午餐後開始環島。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 2.3 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">12:30 - 16:30</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="12:30 - 16:30">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">🛵 北部精華環島</h4>
+                                    <p class="details-display text-gray-600">景點順序：花瓶岩 (拍照) → 美人洞 (看海) → 山豬溝 (步道) → 白燈塔 (看海)。(註：美人洞、山豬溝需門票，07:30-17:00)</p>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=小琉球花瓶岩" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">
+                                        導航至花瓶岩 ↗
+                                    </a>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="🛵 北部精華環島">
+                                    <textarea class="details-edit form-input w-full">景點順序：花瓶岩 (拍照) → 美人洞 (看海) → 山豬溝 (步道) → 白燈塔 (看海)。(註：美人洞、山豬溝需門票，07:30-17:00)</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="https://www.google.com/maps/search/?api=1&query=小琉球花瓶岩">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 2.4 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">16:30 - 17:45</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="16:30 - 17:45">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">🌅 落日亭賞夕陽</h4>
+                                    <p class="details-display text-gray-600">環島結束後，前往落日亭觀賞一月約 17:30 的日落。</p>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=小琉球落日亭" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">
+                                        導航至落日亭 ↗
+                                    </a>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="🌅 落日亭賞夕陽">
+                                    <textarea class="details-edit form-input w-full">環島結束後，前往落日亭觀賞一月約 17:30 的日落。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="https://www.google.com/maps/search/?api=1&query=小琉球落日亭">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 2.5 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">18:30 - 20:30</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="18:30 - 20:30">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">晚餐 (海鮮熱炒)</h4>
+                                    <p class="details-display text-gray-600">在琉球大街或中澳沙灘附近享用海鮮熱炒 (如：琉球番、大福羊肉)。</p>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=小琉球+琉球番" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">
+                                        搜尋晚餐地點 ↗
+                                    </a>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="晚餐 (海鮮熱炒)">
+                                    <textarea class="details-edit form-input w-full">在琉球大街或中澳沙灘附近享用海鮮熱炒 (如：琉球番、大福羊肉)。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="https://www.google.com/maps/search/?api=1&query=小琉球+琉球番">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Add Item Button -->
+                        <div class="text-center mt-6">
+                            <button class="add-item-btn bg-cyan-600 text-white px-4 py-2 rounded-md hover:bg-cyan-700" data-day="day2">＋ 新增行程</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 3 Content -->
+                <div id="day3-content" class="day-content hidden">
+                    <div class="timeline-container">
+                        <!-- Item 3.1 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">05:45 - 07:00</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="05:45 - 07:00">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">🌄 旭日亭看日出</h4>
+                                    <p class="details-display text-gray-600">早起挑戰！務必帶最厚保暖外套。一月日出約在 06:40 左右。</p>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=小琉球旭日亭" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">
+                                        導航至旭日亭 ↗
+                                    </a>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="🌄 旭日亭看日出">
+                                    <textarea class="details-edit form-input w-full">早起挑戰！務必帶最厚保暖外套。一月日出約在 06:40 左右。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="https://www.google.com/maps/search/?api=1&query=小琉球旭日亭">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 3.2 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">09:00 - 11:30</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="09:00 - 11:30">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">潮間帶探索</h4>
+                                    <p class="details-display text-gray-600">需配合當日潮汐時間預約導覽 (重要！)。地點：杉福、肚仔坪。</p>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=小琉球杉福潮間帶" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">
+                                        查看杉福潮間帶 ↗
+                                    </a>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="潮間帶探索">
+                                    <textarea class="details-edit form-input w-full">需配合當日潮汐時間預約導覽 (重要！)。地點：杉福、肚仔坪。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="https://www.google.com/maps/search/?api=1&query=小琉球杉福潮間帶">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 3.3 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">11:30 - 13:00</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="11:30 - 13:00">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">午餐與休息</h4>
+                                    <p class="details-display text-gray-600">享用當地特色午餐 (如：鬼頭刀魚卵香腸、脆皮蛋餅)。</p>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="午餐與休息">
+                                    <textarea class="details-edit form-input w-full">享用當地特色午餐 (如：鬼頭刀魚卵香腸、脆皮蛋餅)。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 3.4 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">13:00 - 16:00</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="13:00 - 16:00">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">📸 南部景點與網美時光</h4>
+                                    <p class="details-display text-gray-600">平衡景點： 烏鬼洞 (需門票) → 厚石群礁 → 網美老木 (拍照打卡)。</p>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=小琉球烏鬼洞" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">
+                                        導航至烏鬼洞 ↗
+                                    </a>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="📸 南部景點與網美時光">
+                                    <textarea class="details-edit form-input w-full">平衡景點： 烏鬼洞 (需門票) → 厚石群礁 → 網美老木 (拍照打卡)。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="https://www.google.com/maps/search/?api=1&query=小琉球烏鬼洞">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 3.5 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">18:30 - 20:30</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="18:30 - 20:30">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">晚餐 (小島最後一夜)</h4>
+                                    <p class="details-display text-gray-600">享受小島的最後一晚。可嘗試不同風味，如 BBQ 吃到飽。</p>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=小琉球+BBQ" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">
+                                        搜尋 BBQ 店家 ↗
+                                    </a>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="晚餐 (小島最後一夜)">
+                                    <textarea class="details-edit form-input w-full">享受小島的最後一晚。可嘗試不同風味，如 BBQ 吃到飽。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="https://www.google.com/maps/search/?api=1&query=小琉球+BBQ">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 3.6 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">20:30 - 22:00</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="20:30 - 22:00">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">夜間生態導覽</h4>
+                                    <p class="details-display text-gray-600">參加民宿或業者提供的夜遊活動，尋找陸蟹、觀星。</p>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="夜間生態導覽">
+                                    <textarea class="details-edit form-input w-full">參加民宿或業者提供的夜遊活動，尋找陸蟹、觀星。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Add Item Button -->
+                        <div class="text-center mt-6">
+                            <button class="add-item-btn bg-cyan-600 text-white px-4 py-2 rounded-md hover:bg-cyan-700" data-day="day3">＋ 新增行程</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 4 Content -->
+                <div id="day4-content" class="day-content hidden">
+                    <div class="timeline-container">
+                        <!-- Item 4.1 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">08:00 - 09:00</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="08:00 - 09:00">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">早餐</h4>
+                                    <p class="details-display text-gray-600">享用在小琉球的最後一頓早餐。</p>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="早餐">
+                                    <textarea class="details-edit form-input w-full">享用在小琉球的最後一頓早餐。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 4.2 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">09:00 - 11:00</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="09:00 - 11:00">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">採買伴手禮與 Check-out</h4>
+                                    <p class="details-display text-gray-600">在琉球大街採買伴手禮 (如：麻花捲) → 回民宿整理行李、退房。</p>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=小琉球+麻花捲" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">
+                                        搜尋麻花捲店家 ↗
+                                    </a>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="採買伴手禮與 Check-out">
+                                    <textarea class="details-edit form-input w-full">在琉球大街採買伴手禮 (如：麻花捲) → 回民宿整理行李、退房。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="https://www.google.com/maps/search/?api=1&query=小琉球+麻花捲">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 4.3 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">11:30 - 12:00</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="11:30 - 12:00">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">搭船離島</h4>
+                                    <p class="details-display text-gray-600">歸還機車 → 白沙尾碼頭搭船 → 東港。</p>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=小琉球白沙尾碼頭" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">
+                                        導航至白沙尾碼頭 ↗
+                                    </a>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="搭船離島">
+                                    <textarea class="details-edit form-input w-full">歸還機車 → 白沙尾碼頭搭船 → 東港。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="https://www.google.com/maps/search/?api=1&query=小琉球白沙尾碼頭">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Item 4.4 -->
+                        <div class="timeline-item">
+                            <div class="flex items-center mb-1">
+                                <span class="time-display font-semibold text-cyan-700 text-lg">12:30 - 賦歸</span>
+                                <input type="text" class="time-edit hidden form-input w-full" value="12:30 - 賦歸">
+                            </div>
+                            <div class="ml-1">
+                                <div class="item-display">
+                                    <h4 class="title-display font-bold text-xl text-gray-900">東港午餐與返程</h4>
+                                    <p class="details-display text-gray-600">可在東港享用海產 (如：華僑市場)，或直接搭乘交通工具返回台北。</p>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=東港華僑市場" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">
+                                        導航至華僑市場 ↗
+                                    </a>
+                                </div>
+                                <div class="item-edit hidden space-y-2">
+                                    <input type="text" class="title-edit form-input w-full" value="東港午餐與返程">
+                                    <textarea class="details-edit form-input w-full">可在東港享用海產 (如：華僑市場)，或直接搭乘交通工具返回台北。</textarea>
+                                    <input type="text" class="map-edit form-input w-full" value="https://www.google.com/maps/search/?api=1&query=東港華僑市場">
+                                </div>
+                            </div>
+                            <div class="item-controls mt-2 space-x-2">
+                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                            </div>
+                        </div>
+                        <!-- Add Item Button -->
+                        <div class="text-center mt-6">
+                            <button class="add-item-btn bg-cyan-600 text-white px-4 py-2 rounded-md hover:bg-cyan-700" data-day="day4">＋ 新增行程</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Food Map -->
+        <section id="food" class="page-section hidden">
+            <h2 class="text-3xl font-bold text-cyan-800 mb-6">小琉球美食地圖</h2>
+            <p class="text-gray-700 mb-6">
+                為您精選了小琉球的必吃美食！您可以使用下方的按鈕來篩選想看的類別。
+            </p>
+            
+            <!-- Filter Buttons -->
+            <div class="flex flex-wrap gap-2 mb-8" id="food-filters">
+                <button class="filter-button active" data-filter="all">全部顯示</button>
+                <button class="filter-button" data-filter="seafood">海鮮/正餐</button>
+                <button class="filter-button" data-filter="snack">在地小吃</button>
+                <button class="filter-button" data-filter="dessert">甜點/飲料</button>
+            </div>
+
+            <!-- Food Card Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="food-grid">
+                <!-- Food Item 1 -->
+                <div class="food-card bg-white rounded-lg shadow-lg overflow-hidden" data-category="seafood">
+                    <div class="p-5">
+                        <span class="text-xs font-semibold bg-cyan-100 text-cyan-800 px-2 py-1 rounded-full">海鮮/正餐</span>
+                        <h3 class="text-xl font-bold text-gray-900 mt-2">大福羊肉海鮮店</h3>
+                        <p class="text-gray-600 text-sm mt-1">招牌羊肉爐、各式海鮮熱炒，在地人也推薦。</p>
+                        <a href="https://www.google.com/maps/search/?api=1&query=小琉球+大福羊肉海鮮店" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-3 inline-block">
+                            在 Google Maps 上查看 ↗
+                        </a>
+                    </div>
+                </div>
+                <!-- Food Item 2 -->
+                <div class="food-card bg-white rounded-lg shadow-lg overflow-hidden" data-category="seafood">
+                    <div class="p-5">
+                        <span class="text-xs font-semibold bg-cyan-100 text-cyan-800 px-2 py-1 rounded-full">海鮮/正餐</span>
+                        <h3 class="text-xl font-bold text-gray-900 mt-2">琉球番壽司</h3>
+                        <p class="text-gray-600 text-sm mt-1">想吃日式料理的好選擇，提供新鮮生魚片與創意壽司。</p>
+                        <a href="https://www.google.com/maps/search/?api=1&query=小琉球+琉球番壽司" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-3 inline-block">
+                            在 Google Maps 上查看 ↗
+                        </a>
+                    </div>
+                </div>
+                <!-- Food Item 3 -->
+                <div class="food-card bg-white rounded-lg shadow-lg overflow-hidden" data-category="snack">
+                    <div class="p-5">
+                        <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-1 rounded-full">在地小吃</span>
+                        <h3 class="text-xl font-bold text-gray-900 mt-2">相思麵</h3>
+                        <p class="text-gray-600 text-sm mt-1">古早味柴燒麵食，便宜大碗，是午餐的好選擇。</p>
+                        <a href="https://www.google.com/maps/search/?api=1&query=小琉球+相思麵" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-3 inline-block">
+                            在 Google Maps 上查看 ↗
+                        </a>
+                    </div>
+                </div>
+                <!-- Food Item 4 -->
+                <div class="food-card bg-white rounded-lg shadow-lg overflow-hidden" data-category="snack">
+                    <div class="p-5">
+                        <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-1 rounded-full">在地小吃</span>
+                        <h3 class="text-xl font-bold text-gray-900 mt-2">洪媽媽早餐店</h3>
+                        <p class="text-gray-600 text-sm mt-1">小琉球最知名的早餐店，必吃琉球粿、賓士包、蔥油條。</p>
+                        <a href="https://www.google.com/maps/search/?api=1&query=小琉球+洪媽媽早餐店" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-3 inline-block">
+                            在 Google Maps 上查看 ↗
+                        </a>
+                    </div>
+                </div>
+                <!-- Food Item 5 -->
+                <div class="food-card bg-white rounded-lg shadow-lg overflow-hidden" data-category="snack">
+                    <div class="p-5">
+                        <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-1 rounded-full">在地小吃</span>
+                        <h3 class="text-xl font-bold text-gray-900 mt-2">小琉球脆皮蛋餅</h3>
+                        <p class="text-gray-600 text-sm mt-1">口感獨特的脆皮蛋餅，有多種口味可選，適合當點心。</p>
+                        <a href="https://www.google.com/maps/search/?api=1&query=小琉球脆皮蛋餅" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-3 inline-block">
+                            在 Google Maps 上查看 ↗
+                        </a>
+                    </div>
+                </div>
+                <!-- Food Item 6 -->
+                <div class="food-card bg-white rounded-lg shadow-lg overflow-hidden" data-category="dessert">
+                    <div class="p-5">
+                        <span class="text-xs font-semibold bg-pink-100 text-pink-800 px-2 py-1 rounded-full">甜點/飲料</span>
+                        <h3 class="text-xl font-bold text-gray-900 mt-2">冰箱冰舖</h3>
+                        <p class="text-gray-600 text-sm mt-1">知名的網美冰店，招牌是芒果雪花冰和海龜造型冰。</p>
+                        <a href="https://www.google.com/maps/search/?api=1&query=小琉球+冰箱冰舖" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-3 inline-block">
+                            在 Google Maps 上查看 ↗
+                        </a>
+                    </div>
+                </div>
+                <!-- Food Item 7 -->
+                <div class="food-card bg-white rounded-lg shadow-lg overflow-hidden" data-category="dessert">
+                    <div class="p-5">
+                        <span class="text-xs font-semibold bg-pink-100 text-pink-800 px-2 py-1 rounded-full">甜點/飲料</span>
+                        <h3 class="text-xl font-bold text-gray-900 mt-2">小本愛玉</h3>
+                        <p class="text-gray-600 text-sm mt-1">主打天然手洗愛玉，海龜造型的愛玉凍超級可愛。</p>
+                        <a href="https://www.google.com/maps/search/?api=1&query=小琉球+小本愛玉" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-3 inline-block">
+                            在 Google Maps 上查看 ↗
+                        </a>
+                    </div>
+                </div>
+                 <!-- Food Item 8 -->
+                <div class="food-card bg-white rounded-lg shadow-lg overflow-hidden" data-category="dessert">
+                    <div class="p-5">
+                        <span class="text-xs font-semibold bg-pink-100 text-pink-800 px-2 py-1 rounded-full">甜點/飲料</span>
+                        <h3 class="text-xl font-bold text-gray-900 mt-2">創12分層飲料</h3>
+                        <p class="text-gray-600 text-sm mt-1">漸層飲料打卡聖地，好喝又好拍，適合環島時來一杯。</p>
+                        <a href="https://www.google.com/maps/search/?api=1&query=小琉球+創12" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-3 inline-block">
+                            在 Google Maps 上查看 ↗
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Prep List -->
+        <section id="prep" class="page-section hidden">
+            <h2 class="text-3xl font-bold text-cyan-800 mb-6">行前準備清單</h2>
+            <p class="text-gray-700 mb-8">
+                最後，別忘了檢查行李！這是一份建議的打包清單，確保您的旅程萬無一失。
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-cyan-700 mb-4">重要證件</h3>
+                    <ul class="space-y-2 text-gray-600">
+                        <li class="flex items-center">
+                            <span class="text-cyan-500 mr-2">✔</span> 身份證、健保卡
+                        </li>
+                        <li class="flex items-center">
+                            <span class="text-cyan-500 mr-2">✔</span> <strong>機車駕照 (必帶)</strong>
+                        </li>
+                        <li class="flex items-center">
+                            <span class="text-cyan-500 mr-2">✔</span> 現金 (島上部分店家只收現金)
+                        </li>
+                        <li class="flex items-center">
+                            <span class="text-cyan-500 mr-2">✔</span> 船票/住宿預訂證明
+                        </li>
+                    </ul>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-cyan-700 mb-4">水上活動</h3>
+                    <ul class="space-y-2 text-gray-600">
+                        <li class="flex items-center">
+                            <span class="text-cyan-500 mr-2">✔</span> 泳衣、泳褲、泳帽
+                        </li>
+                        <li class="flex items-center">
+                            <span class="text-cyan-500 mr-2">✔</span> 快乾毛巾、防水袋
+                        </li>
+                        <li class="flex items-center">
+                            <span class="text-cyan-500 mr-2">✔</span> 拖鞋 (海灘/島上通用)
+                        </li>
+                        <li class="flex items-center">
+                            <span class="text-cyan-500 mr-2">✔</span> 海洋友善防曬乳 (保護珊瑚)
+                        </li>
+                    </ul>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold text-cyan-700 mb-4">衣物與用品</h3>
+                    <ul class="space-y-2 text-gray-600">
+                        <li class="flex items-center">
+                            <span class="text-cyan-500 mr-2">✔</span> 換洗衣物 (輕便為主)
+                        </li>
+                        <li class="flex items-center">
+                            <span class="text-cyan-500 mr-2">✔</span> <strong>保暖外套 (看日出/夜遊必備)</strong>
+                        </li>
+                        <li class="flex items-center">
+                            <span class="text-cyan-500 mr-2">✔</span> 太陽眼鏡、帽子 (防曬)
+                        </li>
+                        <li class="flex items-center">
+                            <span class="text-cyan-500 mr-2">✔</span> 個人藥品 (暈船藥)、盥洗用品
+                        </li>
+                        <li class="flex items-center">
+                            <span class="text-cyan-500 mr-2">✔</span> 充電器、行動電源
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal for Adding/Editing Itinerary Item -->
+    <div id="item-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3 class="text-2xl font-bold mb-4" id="modal-title">新增行程</h3>
+            <form id="item-form">
+                <input type="hidden" id="modal-day" value="">
+                <input type="hidden" id="modal-item-index" value="">
+                <div class="mb-4">
+                    <label for="modal-time" class="block text-sm font-medium text-gray-700">時間 (例如: 09:00 - 11:00)</label>
+                    <input type="text" id="modal-time" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500">
+                </div>
+                <div class="mb-4">
+                    <label for="modal-title-input" class="block text-sm font-medium text-gray-700">活動標題</label>
+                    <input type="text" id="modal-title-input" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500">
+                </div>
+                <div class="mb-4">
+                    <label for="modal-details" class="block text-sm font-medium text-gray-700">詳細內容</label>
+                    <textarea id="modal-details" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500"></textarea>
+                </div>
+                <div class="mb-4">
+                    <label for="modal-map" class="block text-sm font-medium text-gray-700">Google Maps 連結 (選填)</label>
+                    <input type="text" id="modal-map" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500" placeholder="https://www.google.com/maps/...">
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="modal-cancel" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">取消</button>
+                    <button type="submit" id="modal-save" class="bg-cyan-600 text-white px-4 py-2 rounded-md hover:bg-cyan-700">儲存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const transportCtx = document.getElementById('transportChart').getContext('2d');
+            new Chart(transportCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['🚄 高鐵方案', '🚆 台鐵方案', '🚗 開車方案'],
+                    datasets: [
+                        {
+                            label: '預估總時長 (小時)',
+                            data: [3.25, 5.5, 5.5], 
+                            backgroundColor: 'rgba(6, 182, 212, 0.6)', 
+                            borderColor: 'rgba(6, 182, 212, 1)',
+                            borderWidth: 1,
+                            yAxisID: 'yAxisTime'
+                        },
+                        {
+                            label: '預估總花費 (NT$)',
+                            data: [1900, 1100, 2400], 
+                            backgroundColor: 'rgba(245, 158, 11, 0.6)', 
+                            borderColor: 'rgba(245, 158, 11, 1)',
+                            borderWidth: 1,
+                            yAxisID: 'yAxisCost'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        yAxisTime: {
+                            type: 'linear',
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: '小時'
+                            }
+                        },
+                        yAxisCost: {
+                            type: 'linear',
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'NT$'
+                            },
+                            grid: {
+                                drawOnChartArea: false 
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        if (context.dataset.yAxisID === 'yAxisCost') {
+                                            label += new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(context.parsed.y);
+                                        } else {
+                                            label += context.parsed.y + ' 小時';
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            
+            const navLinks = document.querySelectorAll('.nav-link');
+            const pageSections = document.querySelectorAll('.page-section');
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            function switchPage(targetId) {
+                pageSections.forEach(section => {
+                    section.classList.toggle('active', section.id === targetId);
+                });
+                navLinks.forEach(link => {
+                    link.classList.toggle('active', link.dataset.target === targetId);
+                });
+                
+                if (!mobileMenu.classList.contains('hidden')) {
+                    mobileMenu.classList.add('hidden');
+                }
+            }
+            
+            document.getElementById('nav-links').addEventListener('click', (e) => {
+                if (e.target.matches('.nav-link')) {
+                    e.preventDefault();
+                    switchPage(e.target.dataset.target);
+                }
+            });
+
+            document.getElementById('mobile-nav-links').addEventListener('click', (e) => {
+                if (e.target.matches('.nav-link')) {
+                    e.preventDefault();
+                    switchPage(e.target.dataset.target);
+                }
+            });
+
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            
+            const dayTabs = document.getElementById('day-tabs');
+            const tabButtons = Array.from(dayTabs.querySelectorAll('.tab-button'));
+            const dayContents = document.querySelectorAll('.day-content');
+
+            // Initialize ARIA roles and attributes for accessibility
+            dayTabs.setAttribute('role', 'tablist');
+            tabButtons.forEach((btn, idx) => {
+                btn.setAttribute('role', 'tab');
+                btn.setAttribute('aria-selected', btn.classList.contains('active') ? 'true' : 'false');
+                btn.setAttribute('tabindex', btn.classList.contains('active') ? '0' : '-1');
+                // allow keyboard focus styling
+                btn.classList.add('focus:outline-none');
+            });
+
+            function activateTab(button) {
+                const targetDay = button.dataset.day;
+                tabButtons.forEach(btn => {
+                    const isActive = btn === button;
+                    btn.classList.toggle('active', isActive);
+                    btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    btn.setAttribute('tabindex', isActive ? '0' : '-1');
+                });
+                dayContents.forEach(content => {
+                    content.classList.toggle('active', content.id === `${targetDay}-content`);
+                });
+                // ensure the active tab is visible when scrolled horizontally
+                button.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+                button.focus({ preventScroll: true });
+            }
+
+            dayTabs.addEventListener('click', (e) => {
+                const btn = e.target.closest('.tab-button');
+                if (!btn) return;
+                activateTab(btn);
+            });
+
+            // Keyboard navigation: Left/Right/Home/End
+            dayTabs.addEventListener('keydown', (e) => {
+                const key = e.key;
+                const activeIndex = tabButtons.findIndex(b => b.classList.contains('active'));
+                if (key === 'ArrowRight') {
+                    e.preventDefault();
+                    const next = tabButtons[(activeIndex + 1) % tabButtons.length];
+                    activateTab(next);
+                } else if (key === 'ArrowLeft') {
+                    e.preventDefault();
+                    const prev = tabButtons[(activeIndex - 1 + tabButtons.length) % tabButtons.length];
+                    activateTab(prev);
+                } else if (key === 'Home') {
+                    e.preventDefault();
+                    activateTab(tabButtons[0]);
+                } else if (key === 'End') {
+                    e.preventDefault();
+                    activateTab(tabButtons[tabButtons.length - 1]);
+                }
+            });
+
+            
+            const foodFilters = document.getElementById('food-filters');
+            const foodGrid = document.getElementById('food-grid');
+            const foodCards = foodGrid.querySelectorAll('.food-card');
+
+            foodFilters.addEventListener('click', (e) => {
+                if (e.target.matches('.filter-button')) {
+                    const filter = e.target.dataset.filter;
+                    
+                    foodFilters.querySelectorAll('.filter-button').forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.filter === filter);
+                    });
+                    
+                    foodCards.forEach(card => {
+                        if (filter === 'all' || card.dataset.category === filter) {
+                            card.classList.remove('hidden');
+                        } else {
+                            card.classList.add('hidden');
+                        }
+                    });
+                }
+            });
+
+            
+            const itinerarySection = document.getElementById('itinerary');
+            const modal = document.getElementById('item-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalForm = document.getElementById('item-form');
+            const modalDayInput = document.getElementById('modal-day');
+            const modalTimeInput = document.getElementById('modal-time');
+            const modalTitleInput = document.getElementById('modal-title-input');
+            const modalDetailsInput = document.getElementById('modal-details');
+            const modalMapInput = document.getElementById('modal-map');
+            const modalCancelBtn = document.getElementById('modal-cancel');
+
+            let currentEditingItem = null;
+
+            function toggleEditSave(item, isEditing) {
+                const display = item.querySelector('.item-display');
+                const edit = item.querySelector('.item-edit');
+                const editBtn = item.querySelector('.edit-btn');
+                const saveBtn = item.querySelector('.save-btn');
+
+                display.classList.toggle('hidden', isEditing);
+                edit.classList.toggle('hidden', !isEditing);
+                editBtn.classList.toggle('hidden', isEditing);
+                saveBtn.classList.toggle('hidden', !isEditing);
+            }
+
+            itinerarySection.addEventListener('click', (e) => {
+                const target = e.target;
+                const timelineItem = target.closest('.timeline-item');
+
+                
+                if (target.matches('.edit-btn')) {
+                    // show confirmation dialog before editing
+                    const proceed = window.confirm('您即將編輯此項目，按「確定」以開始編輯，按「取消」以離開。');
+                    if (!proceed) return;
+
+                    const time = timelineItem.querySelector('.time-display').innerText;
+                    const title = timelineItem.querySelector('.title-display').innerText;
+                    const details = timelineItem.querySelector('.details-display').innerText;
+                    const mapLink = timelineItem.querySelector('.map-display')?.href || '';
+
+                    timelineItem.querySelector('.time-edit').value = time;
+                    timelineItem.querySelector('.title-edit').value = title;
+                    timelineItem.querySelector('.details-edit').value = details;
+                    timelineItem.querySelector('.map-edit').value = mapLink;
+
+                    toggleEditSave(timelineItem, true);
+                    // focus first input
+                    timelineItem.querySelector('.title-edit').focus();
+                }
+                
+                else if (target.matches('.save-btn')) {
+                    const time = timelineItem.querySelector('.time-edit').value.trim();
+                    const title = timelineItem.querySelector('.title-edit').value.trim();
+                    const details = timelineItem.querySelector('.details-edit').value.trim();
+                    const mapLink = timelineItem.querySelector('.map-edit').value.trim();
+
+                    if (!title) {
+                        alert('請輸入標題名稱，才可儲存。');
+                        timelineItem.querySelector('.title-edit').focus();
+                        return;
+                    }
+
+                    timelineItem.querySelector('.time-display').innerText = time || '未定';
+                    timelineItem.querySelector('.title-display').innerText = title;
+                    timelineItem.querySelector('.details-display').innerText = details || '';
+
+                    const mapElement = timelineItem.querySelector('.map-display');
+                    if (mapLink) {
+                        if (mapElement) {
+                            mapElement.href = mapLink;
+                            mapElement.classList.remove('hidden');
+                        } else {
+                            const newMapLink = document.createElement('a');
+                            newMapLink.href = mapLink;
+                            newMapLink.target = '_blank';
+                            newMapLink.className = 'map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block';
+                            newMapLink.innerText = '查看地圖 ↗';
+                            timelineItem.querySelector('.item-display').appendChild(newMapLink);
+                        }
+                    } else if (mapElement) {
+                        mapElement.classList.add('hidden');
+                    }
+
+                    toggleEditSave(timelineItem, false);
+                }
+                
+                else if (target.matches('.delete-btn')) {
+                    const ok = window.confirm('確認要刪除此行程項目嗎？此動作無法復原。');
+                    if (ok) {
+                        timelineItem.remove();
+                    }
+                }
+                
+                else if (target.matches('.add-item-btn')) {
+                    currentEditingItem = null;
+                    modalTitle.innerText = '新增行程';
+                    modalDayInput.value = target.dataset.day;
+                    modalForm.reset();
+                    modal.classList.remove('hidden');
+                }
+            });
+
+            
+            modalCancelBtn.addEventListener('click', () => {
+                modal.classList.add('hidden');
+            });
+
+            modalForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const day = modalDayInput.value;
+                const time = modalTimeInput.value || "未定";
+                const title = modalTitleInput.value.trim();
+                const details = modalDetailsInput.value || "無詳細說明";
+                if (!title) {
+                    alert('請輸入活動標題');
+                    modalTitleInput.focus();
+                    return;
+                }
+                const map = modalMapInput.value;
+                
+                const mapLinkHTML = map 
+                    ? `<a href="${map}" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">
+                           導航 ↗
+                       </a>`
+                    : '';
+                
+                const newItemHTML = `
+                    <div class="timeline-item">
+                        <div class="flex items-center mb-1">
+                            <span class="time-display font-semibold text-cyan-700 text-lg">${time}</span>
+                            <input type="text" class="time-edit hidden form-input w-full" value="${time}">
+                        </div>
+                        <div class="ml-1">
+                            <div class="item-display">
+                                <h4 class="title-display font-bold text-xl text-gray-900">${title}</h4>
+                                <p class="details-display text-gray-600">${details}</p>
+                                ${mapLinkHTML}
+                            </div>
+                            <div class="item-edit hidden space-y-2">
+                                <input type="text" class="title-edit form-input w-full" value="${title}">
+                                <textarea class="details-edit form-input w-full">${details}</textarea>
+                                <input type="text" class="map-edit form-input w-full" value="${map}">
+                            </div>
+                        </div>
+                        <div class="item-controls mt-2 space-x-2">
+                            <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
+                            <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
+                            <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
+                        </div>
+                    </div>
+                `;
+                
+                const dayContent = document.getElementById(`${day}-content`);
+                const timelineContainer = dayContent.querySelector('.timeline-container');
+                const addButton = timelineContainer.querySelector('.add-item-btn').parentElement; 
+                
+                addButton.insertAdjacentHTML('beforebegin', newItemHTML);
+                
+                modal.classList.add('hidden');
+                modalForm.reset();
+            });
+
+            // --- Budget edit controls ---
+            const budgetDisplay = document.getElementById('budget-display');
+            const budgetInput = document.getElementById('budget-input');
+            const budgetEditBtn = document.getElementById('budget-edit');
+            const budgetSaveBtn = document.getElementById('budget-save');
+            const budgetCancelBtn = document.getElementById('budget-cancel');
+
+            function formatCurrency(n) {
+                return 'NT$ ' + new Intl.NumberFormat('zh-TW').format(n);
+            }
+
+            // load from localStorage
+            const stored = localStorage.getItem('trip_budget');
+            if (stored && !isNaN(Number(stored))) {
+                budgetDisplay.innerText = formatCurrency(Number(stored));
+            }
+
+            budgetEditBtn.addEventListener('click', () => {
+                // switch to input mode
+                const current = budgetDisplay.innerText.replace(/[^0-9]/g,'');
+                budgetInput.value = current || '';
+                budgetDisplay.classList.add('hidden');
+                budgetInput.classList.remove('hidden');
+                budgetEditBtn.classList.add('hidden');
+                budgetSaveBtn.classList.remove('hidden');
+                budgetCancelBtn.classList.remove('hidden');
+                budgetInput.focus();
+            });
+
+            budgetCancelBtn.addEventListener('click', () => {
+                budgetInput.classList.add('hidden');
+                budgetDisplay.classList.remove('hidden');
+                budgetEditBtn.classList.remove('hidden');
+                budgetSaveBtn.classList.add('hidden');
+                budgetCancelBtn.classList.add('hidden');
+            });
+
+            budgetSaveBtn.addEventListener('click', () => {
+                const val = Number(budgetInput.value);
+                if (isNaN(val) || val < 0) {
+                    alert('請輸入有效的數字金額（大於等於 0）。');
+                    budgetInput.focus();
+                    return;
+                }
+                budgetDisplay.innerText = formatCurrency(val);
+                localStorage.setItem('trip_budget', String(val));
+                // restore view
+                budgetInput.classList.add('hidden');
+                budgetDisplay.classList.remove('hidden');
+                budgetEditBtn.classList.remove('hidden');
+                budgetSaveBtn.classList.add('hidden');
+                budgetCancelBtn.classList.add('hidden');
+            });
+
+            switchPage('overview');
+        });
+    </script>
+</body>
+</html>
