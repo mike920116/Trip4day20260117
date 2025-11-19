@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
             datasets: [
                 {
                     label: '預估總時長 (小時)',
-                    data: [3.25, 5.5, 5.5], 
+                    data: [3.25, 5.5, 9.5], 
                     backgroundColor: 'rgba(6, 182, 212, 0.6)', 
                     borderColor: 'rgba(6, 182, 212, 1)',
                     borderWidth: 1,
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 {
                     label: '預估總花費 (NT$)',
-                    data: [1900, 1100, 2400], 
+                    data: [2900, 1700, 1400], 
                     backgroundColor: 'rgba(245, 158, 11, 0.6)', 
                     borderColor: 'rgba(245, 158, 11, 1)',
                     borderWidth: 1,
