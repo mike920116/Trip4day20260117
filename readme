@@ -1,0 +1,19 @@
+# 1. 初始化 Git（如果還沒初始化過）
+git init
+
+# 2. 檢查目前變更狀態
+git status
+
+# 3. 將所有變更加入暫存區
+git add .
+
+# 4. 提交變更（請自行修改提交訊息）
+git commit -m "新增/修改說明"
+
+# 5. 設定遠端（第一次 push 才需要）
+git remote add origin https://github.com/你的帳號/你的倉庫.git
+
+# 6. 推送到 GitHub（main 或 master，依你的分支名稱）
+git push origin main
+# 或
+git push origin master
