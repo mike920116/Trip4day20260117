@@ -978,12 +978,18 @@
                 為您精選了小琉球的必吃美食！您可以使用下方的按鈕來篩選想看的類別。
             </p>
             
-            <!-- Filter Buttons -->
-            <div class="flex flex-wrap gap-2 mb-8" id="food-filters">
-                <button class="filter-button active" data-filter="all">全部顯示</button>
-                <button class="filter-button" data-filter="seafood">海鮮/正餐</button>
-                <button class="filter-button" data-filter="snack">在地小吃</button>
-                <button class="filter-button" data-filter="dessert">甜點/飲料</button>
+            <!-- Filter Buttons + Add -->
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex flex-wrap gap-2" id="food-filters">
+                    <button class="filter-button active px-3 py-1 rounded-md" data-filter="all">全部顯示</button>
+                    <button class="filter-button px-3 py-1 rounded-md" data-filter="seafood">海鮮/正餐</button>
+                    <button class="filter-button px-3 py-1 rounded-md" data-filter="snack">在地小吃</button>
+                    <button class="filter-button px-3 py-1 rounded-md" data-filter="dessert">甜點/飲料</button>
+                    <button class="filter-button px-3 py-1 rounded-md" data-filter="favorite">收藏</button>
+                </div>
+                <div>
+                    <button id="add-food-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded-md">＋ 新增美食</button>
+                </div>
             </div>
 
             <!-- Food Card Grid -->
@@ -1077,6 +1083,246 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Modal: Add / Edit Food -->
+            <div id="food-modal" class="fixed inset-0 hidden items-center justify-center z-50">
+                <div class="absolute inset-0 bg-black opacity-40" data-close-modal></div>
+                <div class="bg-white rounded-lg p-6 z-10 w-full max-w-lg mx-4">
+                    <h3 id="food-modal-title" class="text-lg font-bold mb-4">新增美食</h3>
+                    <form id="food-form" class="space-y-3">
+                        <input type="hidden" id="food-id">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">名稱</label>
+                            <input id="food-name" type="text" required class="w-full border rounded px-3 py-2" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">分類</label>
+                            <select id="food-category" class="w-full border rounded px-3 py-2">
+                                <option value="seafood">海鮮/正餐</option>
+                                <option value="snack">在地小吃</option>
+                                <option value="dessert">甜點/飲料</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">簡短描述</label>
+                            <textarea id="food-desc" class="w-full border rounded px-3 py-2" rows="2"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Google Maps 連結（選填）</label>
+                            <input id="food-link" type="url" class="w-full border rounded px-3 py-2" />
+                        </div>
+                        <div class="flex justify-end space-x-2 mt-2">
+                            <button type="button" id="food-cancel" class="px-4 py-2 rounded bg-gray-200">取消</button>
+                            <button type="submit" id="food-save" class="px-4 py-2 rounded bg-cyan-600 text-white">儲存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <style>
+                /* 小幅加強篩選按鈕與卡片互動樣式 */
+                .filter-button{ border:1px solid transparent; }
+                .filter-button.active{ background-color:#0ea5a4; color:#fff; }
+                .food-card .card-actions{ padding:0.5rem 1rem; border-top:1px solid #eee; display:flex; justify-content:flex-end; gap:0.5rem; }
+                #food-modal[data-open="true"]{ display:flex; }
+                .fav-toggle{ background:transparent; border:none; padding:0.125rem; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+                .fav-toggle svg{ width:1.5rem; height:1.5rem; display:block; }
+                .fav-toggle:focus{ outline:2px solid rgba(6,182,212,0.25); border-radius:0.25rem; }
+            </style>
+
+            <script>
+                (function(){
+                    const storageKey = 'trip_food_items_v1';
+                    let items = [];
+
+                    const selectors = {
+                        grid: document.getElementById('food-grid'),
+                        filters: document.getElementById('food-filters'),
+                        addBtn: document.getElementById('add-food-btn'),
+                        modal: document.getElementById('food-modal'),
+                        form: document.getElementById('food-form'),
+                        idInput: document.getElementById('food-id'),
+                        nameInput: document.getElementById('food-name'),
+                        categoryInput: document.getElementById('food-category'),
+                        descInput: document.getElementById('food-desc'),
+                        linkInput: document.getElementById('food-link'),
+                        cancelBtn: document.getElementById('food-cancel')
+                    };
+
+                    function load(){
+                        const raw = localStorage.getItem(storageKey);
+                        if(raw){
+                            try{ items = JSON.parse(raw) }catch(e){ items = []; }
+                            // normalize favorite flag for backwards compatibility
+                            items = items.map(x => ({ ...x, favorite: !!x.favorite }));
+                        } else {
+                            seedFromDOM();
+                        }
+                    }
+
+                    function seedFromDOM(){
+                        const cards = Array.from(document.querySelectorAll('#food-grid .food-card'));
+                        items = cards.map(card=>{
+                            const label = card.querySelector('span')?.textContent || '';
+                            let category = 'seafood';
+                            if(label.includes('在地')) category='snack';
+                            else if(label.includes('甜點')) category='dessert';
+                            const name = card.querySelector('h3')?.textContent?.trim()||'';
+                            const desc = card.querySelector('p')?.textContent?.trim()||'';
+                            const link = card.querySelector('a')?.href||'';
+                            return { id: Date.now().toString() + Math.random().toString(36).slice(2,7), name, category, desc, link, favorite: false };
+                        });
+                        save();
+                    }
+
+                    function save(){
+                        localStorage.setItem(storageKey, JSON.stringify(items));
+                    }
+
+                    function clearGrid(){ selectors.grid.innerHTML = ''; }
+
+                    function render(filter='all'){
+                        clearGrid();
+                        items.forEach((it, idx)=>{
+                            // support 'favorite' filter which ignores category
+                            if(filter !== 'all' && filter !== 'favorite' && it.category !== filter) return;
+                            if(filter === 'favorite' && !it.favorite) return;
+                            const el = document.createElement('div');
+                            el.className = 'food-card relative bg-white rounded-lg shadow-lg overflow-hidden';
+                            el.dataset.id = it.id;
+                            el.dataset.category = it.category;
+                            const labelText = it.category === 'seafood' ? '海鮮/正餐' : (it.category === 'snack' ? '在地小吃' : '甜點/飲料');
+                            el.innerHTML = `
+                                <div class="p-5">
+                                    <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-1 rounded-full">${labelText}</span>
+                                    <h3 class="text-xl font-bold text-gray-900 mt-2">${escapeHtml(it.name)}</h3>
+                                    <p class="text-gray-600 text-sm mt-1">${escapeHtml(it.desc)}</p>
+                                    ${it.link ? `<a href="${escapeAttr(it.link)}" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-3 inline-block">在 Google Maps 上查看 ↗</a>` : ''}
+                                </div>
+                                <div class="card-actions">
+                                    <button class="edit-food text-sm text-cyan-600">編輯</button>
+                                    <button class="delete-food text-sm text-red-600">刪除</button>
+                                </div>
+                                <button class="fav-toggle absolute left-3 bottom-3" data-id="${it.id}" title="加入收藏" aria-pressed="${it.favorite? 'true':'false'}">
+                                    ${it.favorite ? '<svg class="w-6 h-6 text-red-500" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 21s-7.33-4.873-9.333-7.333C.667 10.8 3.6 6 8.667 6 10.8 6 12 7.333 12 7.333S13.2 6 15.333 6C20.4 6 23.333 10.8 21.333 13.667 19.333 16.127 12 21 12 21z"/></svg>' : '<svg class="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20.8 8.6c0 5.1-8 10-8 10s-8-4.9-8-10a5.6 5.6 0 0 1 5.6-5.6c1.8 0 3.4.8 4.4 2.1 1-1.3 2.6-2.1 4.4-2.1a5.6 5.6 0 0 1 5.6 5.6z"/></svg>'}
+                                </button>
+                            `;
+                            selectors.grid.appendChild(el);
+                        });
+                        attachCardListeners();
+                    }
+
+                    function attachCardListeners(){
+                        document.querySelectorAll('.edit-food').forEach(btn=>{
+                            btn.onclick = (e)=>{
+                                const id = e.target.closest('.food-card').dataset.id;
+                                openModalForEdit(id);
+                            };
+                        });
+                        document.querySelectorAll('.delete-food').forEach(btn=>{
+                            btn.onclick = (e)=>{
+                                const id = e.target.closest('.food-card').dataset.id;
+                                if(confirm('確定要刪除此筆美食嗎？')){
+                                    items = items.filter(x=>x.id !== id);
+                                    save(); render(currentFilter());
+                                }
+                            };
+                        });
+                        // 收藏按鈕處理：點擊切換 favorite，儲存後依篩選重新渲染
+                        document.querySelectorAll('.fav-toggle').forEach(btn=>{
+                            btn.onclick = (e)=>{
+                                e.stopPropagation();
+                                const id = btn.closest('.food-card')?.dataset.id;
+                                if(!id) return;
+                                const it = items.find(x=>x.id === id);
+                                if(!it) return;
+                                it.favorite = !it.favorite;
+                                save();
+                                const cf = currentFilter();
+                                if(cf === 'favorite') render('favorite');
+                                else render(cf);
+                            };
+                        });
+                    }
+
+                    function currentFilter(){
+                        const active = selectors.filters.querySelector('.filter-button.active');
+                        return active ? active.dataset.filter : 'all';
+                    }
+
+                    function openModal(newFlag=true){
+                        selectors.modal.classList.remove('hidden');
+                        selectors.modal.dataset.open = 'true';
+                    }
+
+                    function closeModal(){
+                        selectors.modal.classList.add('hidden');
+                        selectors.modal.dataset.open = 'false';
+                        selectors.form.reset();
+                        selectors.idInput.value = '';
+                    }
+
+                    function openModalForEdit(id){
+                        const it = items.find(x=>x.id===id);
+                        if(!it) return;
+                        selectors.idInput.value = it.id;
+                        selectors.nameInput.value = it.name;
+                        selectors.categoryInput.value = it.category;
+                        selectors.descInput.value = it.desc;
+                        selectors.linkInput.value = it.link;
+                        document.getElementById('food-modal-title').textContent = '編輯美食';
+                        openModal(false);
+                    }
+
+                    function escapeHtml(str){ return String(str).replace(/[&<>\"]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s])); }
+                    function escapeAttr(str){ return String(str).replace(/"/g, '%22'); }
+
+                    // Filter button handling
+                    selectors.filters.querySelectorAll('.filter-button').forEach(btn=>{
+                        btn.addEventListener('click', ()=>{
+                            selectors.filters.querySelectorAll('.filter-button').forEach(b=>b.classList.remove('active'));
+                            btn.classList.add('active');
+                            render(btn.dataset.filter);
+                        });
+                    });
+
+                    // Add button
+                    selectors.addBtn.addEventListener('click', ()=>{
+                        document.getElementById('food-modal-title').textContent = '新增美食';
+                        selectors.form.reset(); selectors.idInput.value = '';
+                        openModal();
+                    });
+
+                    // Modal close
+                    selectors.cancelBtn.addEventListener('click', ()=> closeModal());
+                    selectors.modal.querySelector('[data-close-modal]').addEventListener('click', ()=> closeModal());
+
+                    // Form submit
+                    selectors.form.addEventListener('submit', (e)=>{
+                        e.preventDefault();
+                        const id = selectors.idInput.value;
+                        const payload = {
+                            id: id || (Date.now().toString() + Math.random().toString(36).slice(2,7)),
+                            name: selectors.nameInput.value.trim(),
+                            category: selectors.categoryInput.value,
+                            desc: selectors.descInput.value.trim(),
+                            link: selectors.linkInput.value.trim(),
+                            favorite: id ? (items.find(x => x.id === id)?.favorite || false) : false
+                        };
+                        if(!payload.name){ alert('請輸入名稱'); return; }
+                        if(id){
+                            items = items.map(x=> x.id === id ? payload : x);
+                        } else {
+                            items.unshift(payload);
+                        }
+                        save(); closeModal(); render(currentFilter());
+                    });
+
+                    // initial load
+                    load(); render('all');
+                })();
+            </script>
+
         </section>
 
         <!-- Section 5: Prep List -->
@@ -1089,55 +1335,39 @@
                 <div class="bg-white p-6 rounded-lg shadow-lg">
                     <h3 class="text-xl font-semibold text-cyan-700 mb-4">重要證件</h3>
                     <ul class="space-y-2 text-gray-600">
-                        <li class="flex items-center">
-                            <span class="text-cyan-500 mr-2">✔</span> 身份證、健保卡
-                        </li>
-                        <li class="flex items-center">
-                            <span class="text-cyan-500 mr-2">✔</span> <strong>機車駕照 (必帶)</strong>
-                        </li>
-                        <li class="flex items-center">
-                            <span class="text-cyan-500 mr-2">✔</span> 現金 (島上部分店家只收現金)
-                        </li>
-                        <li class="flex items-center">
-                            <span class="text-cyan-500 mr-2">✔</span> 船票/住宿預訂證明
-                        </li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 身份證 / 健保卡</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 機車駕照</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 現金</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 船票 / 住宿證明</li>
                     </ul>
                 </div>
                 <div class="bg-white p-6 rounded-lg shadow-lg">
                     <h3 class="text-xl font-semibold text-cyan-700 mb-4">水上活動</h3>
                     <ul class="space-y-2 text-gray-600">
-                        <li class="flex items-center">
-                            <span class="text-cyan-500 mr-2">✔</span> 泳衣、泳褲、泳帽
-                        </li>
-                        <li class="flex items-center">
-                            <span class="text-cyan-500 mr-2">✔</span> 快乾毛巾、防水袋
-                        </li>
-                        <li class="flex items-center">
-                            <span class="text-cyan-500 mr-2">✔</span> 拖鞋 (海灘/島上通用)
-                        </li>
-                        <li class="flex items-center">
-                            <span class="text-cyan-500 mr-2">✔</span> 海洋友善防曬乳 (保護珊瑚)
-                        </li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 泳衣 / 泳褲</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 蛙鏡 / 呼吸管</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 蛙鞋 (腳蹼)</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 礁石鞋 / 膠鞋</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 浴巾 / 快乾毛巾</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 防水袋 / 乾濕分離袋</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 游泳圈 / 浮具</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 環保防曬乳</li>
                     </ul>
                 </div>
                 <div class="bg-white p-6 rounded-lg shadow-lg">
                     <h3 class="text-xl font-semibold text-cyan-700 mb-4">衣物與用品</h3>
                     <ul class="space-y-2 text-gray-600">
-                        <li class="flex items-center">
-                            <span class="text-cyan-500 mr-2">✔</span> 換洗衣物 (輕便為主)
-                        </li>
-                        <li class="flex items-center">
-                            <span class="text-cyan-500 mr-2">✔</span> <strong>保暖外套 (看日出/夜遊必備)</strong>
-                        </li>
-                        <li class="flex items-center">
-                            <span class="text-cyan-500 mr-2">✔</span> 太陽眼鏡、帽子 (防曬)
-                        </li>
-                        <li class="flex items-center">
-                            <span class="text-cyan-500 mr-2">✔</span> 個人藥品 (暈船藥)、盥洗用品
-                        </li>
-                        <li class="flex items-center">
-                            <span class="text-cyan-500 mr-2">✔</span> 充電器、行動電源
-                        </li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 換洗衣物（短袖 / 薄長袖、長褲 / 短褲）</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 襪子 / 內衣褲</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 保暖外套 / 防風外套</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 拖鞋 / 涼鞋</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 防曬袖套</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 太陽眼鏡 / 帽子</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 充電器 / 行動電源</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 小型醫藥包</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 暈船藥</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 防蚊液</li>
+                        <li class="flex items-center"><span class="text-cyan-500 mr-2">✔</span> 輕便手電筒</li>
                     </ul>
                 </div>
             </div>
