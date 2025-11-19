@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const date = new Date();
         date.setHours(h);
         date.setMinutes(m + minutesToAdd);
-        // 格式化回 HH:mm
         const newH = String(date.getHours()).padStart(2, '0');
         const newM = String(date.getMinutes()).padStart(2, '0');
         return `${newH}:${newM}`;
@@ -140,17 +139,16 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/api/itinerary')
             .then(response => response.json())
             .then(data => {
-                // 【修改點】在此處進行排序：先比對 Day，再比對開始時間
+                // 前端排序：Day -> Start Time
                 data.sort((a, b) => {
                     if (a.day !== b.day) return a.day.localeCompare(b.day);
-                    // 取出 "09:00 - 11:00" 前面的 "09:00" 來比較
                     const timeA = (a.time_range || '').split('-')[0].trim();
                     const timeB = (b.time_range || '').split('-')[0].trim();
                     return timeA.localeCompare(timeB);
                 });
 
-                globalItineraries = data; // 存入全域變數
-                renderTimeline(data);     // 渲染排序後的資料
+                globalItineraries = data;
+                renderTimeline(data);
             })
             .catch(err => console.error('無法讀取行程:', err));
     }
@@ -176,36 +174,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createTimelineItemHTML(item) {
         const mapHtml = item.map_link 
-            ? `<a href="${item.map_link}" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block">導航 ↗</a>` 
+            ? `<a href="${item.map_link}" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block font-medium">查看地圖 ↗</a>` 
             : '';
         
+        // 【美化點】這裡更新了按鈕的樣式，並去除了舊的編輯模式 HTML 區塊
         return `
-        <div class="timeline-item" data-id="${item.id}">
-            <div class="flex items-center mb-1">
-                <span class="time-display font-semibold text-cyan-700 text-lg">${item.time_range}</span>
-                <input type="text" class="time-edit hidden form-input w-full" value="${item.time_range}">
-            </div>
-            <div class="ml-1">
-                <div class="item-display">
-                    <h4 class="title-display font-bold text-xl text-gray-900">${item.title}</h4>
-                    <p class="details-display text-gray-600">${item.details}</p>
+        <div class="timeline-item p-4 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-shadow duration-200" data-id="${item.id}">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-1">
+                        <span class="inline-block px-2 py-1 bg-cyan-50 text-cyan-700 text-xs font-bold rounded">${item.time_range}</span>
+                    </div>
+                    <h4 class="title-display font-bold text-xl text-gray-800 mb-1">${item.title}</h4>
+                    <p class="details-display text-gray-600 text-sm mb-2 leading-relaxed">${item.details}</p>
                     ${mapHtml}
                 </div>
-                <div class="item-edit hidden space-y-2">
-                    <input type="text" class="title-edit form-input w-full" value="${item.title}">
-                    <textarea class="details-edit form-input w-full">${item.details}</textarea>
-                    <input type="text" class="map-edit form-input w-full" value="${item.map_link}">
+                
+                <div class="flex items-center gap-2 w-full sm:w-auto border-t sm:border-t-0 border-gray-100 pt-3 sm:pt-0 mt-2 sm:mt-0">
+                    <button class="edit-btn flex-1 sm:flex-none flex items-center justify-center gap-1 px-3 py-1.5 text-sm font-medium text-cyan-700 bg-cyan-50 hover:bg-cyan-100 rounded-md transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        編輯
+                    </button>
+                    <button class="delete-btn flex-1 sm:flex-none flex items-center justify-center gap-1 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-md transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        刪除
+                    </button>
                 </div>
-            </div>
-            <div class="item-controls mt-2 space-x-2">
-                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
-                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
-                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
             </div>
         </div>`;
     }
 
-    // 美食部分
+    // 美食部分 (保持原樣)
     function fetchFood() {
         fetch('/api/foods')
             .then(res => res.json())
@@ -252,128 +251,146 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 5. 編輯/新增/刪除 互動邏輯
+    // ==========================================
+    // 5. 編輯/新增/刪除 互動邏輯 (重點更新)
+    // ==========================================
     const itemModal = document.getElementById('item-modal');
     const itemForm = document.getElementById('item-form');
+    const modalTitle = document.getElementById('modal-title');
+    const modalDayInput = document.getElementById('modal-day');
+    const modalIdInput = document.getElementById('modal-item-id'); // 隱藏的 ID 欄位
 
-    // --- 時間連動邏輯 (New!) ---
+    // --- 時間連動邏輯 ---
     const startTimeInput = document.getElementById('modal-start-time');
     const endTimeInput = document.getElementById('modal-end-time');
     const add15Btn = document.getElementById('add-15m-btn');
 
-    // A. 當「開始時間」改變時，結束時間自動 +1 小時
     startTimeInput.addEventListener('change', () => {
         if (startTimeInput.value) {
-            // 自動設定為 1 小時後 (60分鐘)
             endTimeInput.value = addMinutesToTime(startTimeInput.value, 60);
         }
     });
 
-    // B. 點擊「+15分」按鈕
     add15Btn.addEventListener('click', () => {
         if (endTimeInput.value) {
             endTimeInput.value = addMinutesToTime(endTimeInput.value, 15);
         } else if (startTimeInput.value) {
-            // 如果結束時間是空的，就從開始時間往加 15 分
             endTimeInput.value = addMinutesToTime(startTimeInput.value, 15);
         }
     });
 
-    // 新增行程 Modal 開啟
+    // 打開新增視窗
     document.querySelectorAll('.add-item-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            document.getElementById('modal-day').value = e.target.dataset.day;
-            itemForm.reset(); 
-            // 這裡不需要改，reset() 會自動清空新的 time input
+            itemForm.reset(); // 清空表單
+            modalIdInput.value = ""; // 確保沒有 ID (代表新增模式)
+            modalDayInput.value = e.target.dataset.day;
+            modalTitle.innerText = "新增行程"; // 設定標題
             itemModal.classList.remove('hidden');
         });
     });
+
     document.getElementById('modal-cancel').addEventListener('click', () => itemModal.classList.add('hidden'));
 
+    // 表單送出 (同時處理 新增 與 編輯)
     itemForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        
-        const startTime = document.getElementById('modal-start-time').value;
-        const endTime = document.getElementById('modal-end-time').value;
 
-        // 【修改點】防呆檢查：結束時間必須晚於開始時間
+        const startTime = startTimeInput.value;
+        const endTime = endTimeInput.value;
+
         if (endTime <= startTime) {
             alert("⚠️ 結束時間必須晚於開始時間！\n請重新調整時間。");
-            // 也可以顯示我寫在 HTML 裡的 id="time-error-msg"
-            // document.getElementById('time-error-msg').classList.remove('hidden');
-            return; // 阻止程式繼續往下跑
+            return; 
         }
-
         const combinedTime = `${startTime} - ${endTime}`;
+        
+        const id = modalIdInput.value; // 取得 ID
+        const isEditMode = !!id;       // 有 ID 就是編輯模式
 
         const payload = {
-            day: document.getElementById('modal-day').value,
+            day: modalDayInput.value,
             time_range: combinedTime,
             title: document.getElementById('modal-title-input').value,
             details: document.getElementById('modal-details').value,
             map_link: document.getElementById('modal-map').value
         };
 
-        fetch('/api/itinerary', {
-            method: 'POST',
+        // 判斷是 POST (新增) 還是 PUT (修改)
+        const url = isEditMode ? `/api/itinerary/${id}` : '/api/itinerary';
+        const method = isEditMode ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         }).then(response => {
             if (response.ok) {
                 itemModal.classList.add('hidden');
-                fetchItinerary();
+                fetchItinerary(); // 重新讀取畫面
+            } else {
+                alert("儲存失敗，請稍後再試");
             }
         });
     });
 
-
+    // 點擊行程卡片上的按鈕 (編輯 / 刪除)
     const itinerarySection = document.getElementById('itinerary');
     itinerarySection.addEventListener('click', (e) => {
-        const target = e.target;
-        const timelineItem = target.closest('.timeline-item');
+        // 找到按鈕
+        const editBtn = e.target.closest('.edit-btn');
+        const deleteBtn = e.target.closest('.delete-btn');
+        
+        // 找到該行資料的容器
+        const timelineItem = e.target.closest('.timeline-item');
         if (!timelineItem) return;
         const id = timelineItem.dataset.id;
 
-        if (target.matches('.delete-btn')) {
-            if (confirm('確定要刪除嗎？')) {
+        // --- 刪除功能 ---
+        if (deleteBtn) {
+            if (confirm('確定要刪除此行程嗎？')) {
                 fetch(`/api/itinerary/${id}`, { method: 'DELETE' })
-                    .then(res => { if (res.ok) timelineItem.remove(); });
+                    .then(res => { 
+                        if (res.ok) {
+                            // 從全域變數移除，避免搜尋時還跑出來
+                            globalItineraries = globalItineraries.filter(x => x.id != id);
+                            timelineItem.remove(); 
+                        }
+                    });
             }
-        } else if (target.matches('.edit-btn')) {
-            toggleEditSave(timelineItem, true);
-        } else if (target.matches('.save-btn')) {
-            const payload = {
-                title: timelineItem.querySelector('.title-edit').value,
-                details: timelineItem.querySelector('.details-edit').value,
-                time_range: timelineItem.querySelector('.time-edit').value,
-                map_link: timelineItem.querySelector('.map-edit').value
-            };
-            fetch(`/api/itinerary/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(updatedItem => {
-                timelineItem.querySelector('.title-display').innerText = updatedItem.title;
-                timelineItem.querySelector('.details-display').innerText = updatedItem.details;
-                timelineItem.querySelector('.time-display').innerText = updatedItem.time_range;
-                toggleEditSave(timelineItem, false);
-            });
+        } 
+        // --- 編輯功能 (打開 Modal 並填入資料) ---
+        else if (editBtn) {
+            // 1. 從全域變數找到這筆資料 (比去 DOM 抓更準確)
+            const itemData = globalItineraries.find(x => x.id == id);
+            if (!itemData) return;
+
+            // 2. 填入表單
+            modalIdInput.value = itemData.id; // 設定 ID (重要！)
+            modalDayInput.value = itemData.day;
+            document.getElementById('modal-title-input').value = itemData.title;
+            document.getElementById('modal-details').value = itemData.details || '';
+            document.getElementById('modal-map').value = itemData.map_link || '';
+            
+            // 3. 拆解時間字串 "09:00 - 10:00" -> 填入兩個 input
+            if (itemData.time_range && itemData.time_range.includes('-')) {
+                const parts = itemData.time_range.split('-');
+                startTimeInput.value = parts[0].trim();
+                endTimeInput.value = parts[1].trim();
+            } else {
+                startTimeInput.value = "";
+                endTimeInput.value = "";
+            }
+
+            // 4. 設定標題並顯示
+            modalTitle.innerText = "編輯行程";
+            itemModal.classList.remove('hidden');
         }
     });
 
-    function toggleEditSave(item, isEditing) {
-        item.querySelector('.item-display').classList.toggle('hidden', isEditing);
-        item.querySelector('.item-edit').classList.toggle('hidden', !isEditing);
-        item.querySelector('.edit-btn').classList.toggle('hidden', isEditing);
-        item.querySelector('.save-btn').classList.toggle('hidden', !isEditing);
-    }
-
     // ==========================================
-    // 6. 行前準備清單邏輯 (New! 這是您缺少的)
+    // 6. 行前準備清單邏輯
     // ==========================================
-    
     const prepGrid = document.getElementById('prep-grid');
     
     function loadPrep() {
@@ -471,7 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 啟動
-    loadPrep(); // <--- 這一行非常重要，您之前可能少了它
+    loadPrep(); 
     fetchItinerary();
     fetchFood();
     switchPage('overview');
