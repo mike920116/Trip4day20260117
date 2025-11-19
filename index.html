@@ -325,13 +325,46 @@
                 <div class="chart-container mb-6">
                     <canvas id="transportChart"></canvas>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div>
                         <h4 class="font-bold text-lg text-cyan-800">🚄 方案一：高鐵 (最快)</h4>
                         <p><strong>路線：</strong>高鐵南港站 → 高鐵左營站</p>
-                        <p><strong>交通：</strong>(約 1.5 - 2 小時, 標準車廂對號座: $1,480 元)</p>
-                        <p><strong>轉乘：</strong>於左營站搭乘計程車或「墾丁快線」客運至東港漁港 (約 45-60 分鐘, $300-$400)</p>
-                        <p class="font-semibold mt-2"><strong>總計：</strong>約 3 - 3.5 小時 | $1800 - $1950</p>
+                        <p><strong>交通時間：</strong>約 1.5 - 2 小時 (高鐵車程)</p>
+                        <p class="mt-2"><strong>高鐵票價（最新）：</strong></p>
+                        <div class="overflow-x-auto text-sm">
+                            <table class="min-w-full text-sm text-left border">
+                                <thead>
+                                    <tr class="bg-gray-50">
+                                        <th class="px-3 py-2">車廂</th>
+                                        <th class="px-3 py-2">全票</th>
+                                        <th class="px-3 py-2">孩童/敬老/愛心</th>
+                                        <th class="px-3 py-2">團體票</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-t">
+                                        <td class="px-3 py-2">標準車廂</td>
+                                        <td class="px-3 py-2">NT$ 1,530</td>
+                                        <td class="px-3 py-2">NT$ 765</td>
+                                        <td class="px-3 py-2">NT$ 1,450</td>
+                                    </tr>
+                                    <tr class="border-t">
+                                        <td class="px-3 py-2">商務車廂</td>
+                                        <td class="px-3 py-2">NT$ 2,500</td>
+                                        <td class="px-3 py-2">NT$ 1,250</td>
+                                        <td class="px-3 py-2">NT$ 2,375</td>
+                                    </tr>
+                                    <tr class="border-t">
+                                        <td class="px-3 py-2">自由座車廂</td>
+                                        <td class="px-3 py-2">NT$ 1,480</td>
+                                        <td class="px-3 py-2">NT$ 740</td>
+                                        <td class="px-3 py-2">-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- <p class="mt-2"><strong>轉乘：</strong>於左營站搭乘計程車或「墾丁快線」客運至東港漁港 (約 45-60 分鐘, 約 NT$300 - NT$400)</p>
+                        <p class="font-semibold mt-2"><strong>總計 (參考)：</strong>標準車廂全票約 NT$1,530 + 轉乘 NT$300-400 → 約 NT$1,830 - NT$1,930</p> -->
                     </div>
                     <div>
                         <h4 class="font-bold text-lg text-cyan-800">🚆 方案二：台鐵 (經濟)</h4>
@@ -356,8 +389,40 @@
                     <h3 class="text-xl font-semibold text-cyan-700 mb-3">第二階段：東港 ⇌ 小琉球</h3>
                     <p class="text-gray-600"><strong>交通：</strong>民營交通船 (推薦：東琉線、泰富)</p>
                     <p class="text-gray-600"><strong>航程：</strong>約 25 - 30 分鐘</p>
-                    <p class="text-gray-600"><strong>票價：</strong>來回票約 $410</p>
-                    <p class="text-gray-600 font-medium mt-2"><strong>建議：</strong>提早線上預訂船票，並搭乘 11:30 前的船班登島。</p>
+                    <p class="mt-2"><strong>船票（最新確認）：</strong></p>
+                    <div class="overflow-x-auto text-sm">
+                        <table class="min-w-full text-sm text-left border">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="px-3 py-2">票種</th>
+                                    <th class="px-3 py-2">張數</th>
+                                    <th class="px-3 py-2">單價（來回）</th>
+                                    <th class="px-3 py-2">小計</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-t">
+                                    <td class="px-3 py-2">全票</td>
+                                    <td class="px-3 py-2">14 張</td>
+                                    <td class="px-3 py-2">NT$ 390</td>
+                                    <td class="px-3 py-2">NT$ 5,460</td>
+                                </tr>
+                                <tr class="border-t">
+                                    <td class="px-3 py-2">敬老 / 半票</td>
+                                    <td class="px-3 py-2">1 張</td>
+                                    <td class="px-3 py-2">NT$ 210</td>
+                                    <td class="px-3 py-2">NT$ 210</td>
+                                </tr>
+                                <tr class="border-t font-semibold">
+                                    <td class="px-3 py-2">總計</td>
+                                    <td class="px-3 py-2">-</td>
+                                    <td class="px-3 py-2">-</td>
+                                    <td class="px-3 py-2">NT$ 5,670</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-gray-600 font-medium mt-2"><strong>建議：</strong>請依人數確認張數並於線上或現場驗票；建議提早預訂船票並搭乘 11:30 前的船班登島。</p>
                     <a href="https://www.google.com/maps/search/?api=1&query=東港漁港" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-2 inline-block">
                         查看東港漁港位置 ↗
                     </a>
@@ -365,10 +430,31 @@
                 <!-- Part 3: Island Transport -->
                 <div class="bg-white p-6 rounded-lg shadow-lg">
                     <h3 class="text-xl font-semibold text-cyan-700 mb-3">第三階段：島上交通</h3>
-                    <p class="text-gray-600"><strong>交通：</strong>租賃機車</p>
-                    <p class="text-gray-600"><strong>期間：</strong>4 天 3 夜 (依使用者需求)</p>
-                    <p class="text-gray-600"><strong>費用：</strong>約 $500 - $700 </p>
-                    <p class="text-gray-600 font-medium mt-2"><strong>備註：</strong>登島後在白沙尾碼頭有許多租車行，可先預訂或現場租借。</p>
+                    <p class="text-gray-600"><strong>交通：</strong>租賃機車（活力125，新車）</p>
+                    <p class="text-gray-600"><strong>期間範例：</strong>4 天 3 夜（共 72 小時）</p>
+                    <p class="mt-2"><strong>價格說明：</strong></p>
+                    <div class="overflow-x-auto text-sm">
+                        <table class="min-w-full text-sm text-left border">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="px-3 py-2">項目</th>
+                                    <th class="px-3 py-2">單位價格</th>
+                                    <th class="px-3 py-2">數量</th>
+                                    <th class="px-3 py-2">小計</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-t">
+                                    <td class="px-3 py-2">機車（活力125）72 小時</td>
+                                    <td class="px-3 py-2">NT$ 1,100 / 台</td>
+                                    <td class="px-3 py-2">1 台</td>
+                                    <td class="px-3 py-2">NT$ 1,100</td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-gray-600 font-medium mt-2"><strong>備註：</strong>單台 72 小時價格為 NT$1,100；若逾時，每小時以 NT$50 計（優惠價），最高額外收費為 NT$200。建議事先與租車行確認車況與保險規定。</p>
                 </div>
                 <!-- Part 4: Accommodation -->
                 <div class="bg-white p-6 rounded-lg shadow-lg">
