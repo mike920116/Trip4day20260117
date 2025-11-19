@@ -160,10 +160,12 @@ def seed_data():
 def index():
     return render_template('index.html')
 
-# --- API: Itinerary ---
+# --- API: Itinerary (行程) ---
 @app.route('/api/itinerary', methods=['GET'])
 def get_itinerary():
-    items = ItineraryItem.query.order_by(ItineraryItem.id).all()
+    # 【修改點】改為依照 day 和 time_range 排序，而不是 id
+    # 這樣從資料庫拿出來的時候就已經大致排好了
+    items = ItineraryItem.query.order_by(ItineraryItem.day, ItineraryItem.time_range).all()
     return jsonify([item.to_dict() for item in items])
 
 @app.route('/api/itinerary', methods=['POST'])

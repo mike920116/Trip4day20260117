@@ -355,11 +355,23 @@
         <div class="modal-content">
             <h3 class="text-2xl font-bold mb-4" id="modal-title">新增行程</h3>
             <form id="item-form">
-                <input type="hidden" id="modal-day" value="">
+                <input type="hidden" id="modal-day" value="">                
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700">時間</label>
-                    <input type="text" id="modal-time" class="mt-1 block w-full border rounded-md shadow-sm px-3 py-2" placeholder="例如 10:00 - 12:00">
-                </div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <input type="time" id="modal-start-time" class="block w-1/3 border border-gray-300 rounded-md shadow-sm px-2 py-2 focus:border-cyan-500 focus:ring-cyan-500" required>
+                        
+                        <span class="text-gray-500">至</span>
+                        
+                        <input type="time" id="modal-end-time" class="block w-1/3 border border-gray-300 rounded-md shadow-sm px-2 py-2 focus:border-cyan-500 focus:ring-cyan-500" required>
+                        
+                        <button type="button" id="add-15m-btn" class="bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200 px-3 py-2 rounded-md text-sm whitespace-nowrap transition">
+                            +15分
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1 hidden" id="time-error-msg">⚠️ 結束時間不能早於開始時間</p>
+                </div>                                                                          
+
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700">活動標題</label>
                     <input type="text" id="modal-title-input" class="mt-1 block w-full border rounded-md shadow-sm px-3 py-2" required>

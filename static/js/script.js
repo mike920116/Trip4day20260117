@@ -4,6 +4,19 @@ document.addEventListener('DOMContentLoaded', () => {
     let globalItineraries = [];
     let globalFoods = [];
 
+    // --- 時間計算小工具 ---
+    function addMinutesToTime(timeStr, minutesToAdd) {
+        if (!timeStr) return "";
+        const [h, m] = timeStr.split(':').map(Number);
+        const date = new Date();
+        date.setHours(h);
+        date.setMinutes(m + minutesToAdd);
+        // 格式化回 HH:mm
+        const newH = String(date.getHours()).padStart(2, '0');
+        const newM = String(date.getMinutes()).padStart(2, '0');
+        return `${newH}:${newM}`;
+    }
+
     // 1. 初始化 Chart.js (交通圖表)
     const transportCtx = document.getElementById('transportChart').getContext('2d');
     new Chart(transportCtx, {
@@ -127,8 +140,17 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/api/itinerary')
             .then(response => response.json())
             .then(data => {
-                globalItineraries = data;
-                renderTimeline(data);
+                // 【修改點】在此處進行排序：先比對 Day，再比對開始時間
+                data.sort((a, b) => {
+                    if (a.day !== b.day) return a.day.localeCompare(b.day);
+                    // 取出 "09:00 - 11:00" 前面的 "09:00" 來比較
+                    const timeA = (a.time_range || '').split('-')[0].trim();
+                    const timeB = (b.time_range || '').split('-')[0].trim();
+                    return timeA.localeCompare(timeB);
+                });
+
+                globalItineraries = data; // 存入全域變數
+                renderTimeline(data);     // 渲染排序後的資料
             })
             .catch(err => console.error('無法讀取行程:', err));
     }
@@ -234,10 +256,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const itemModal = document.getElementById('item-modal');
     const itemForm = document.getElementById('item-form');
 
+    // --- 時間連動邏輯 (New!) ---
+    const startTimeInput = document.getElementById('modal-start-time');
+    const endTimeInput = document.getElementById('modal-end-time');
+    const add15Btn = document.getElementById('add-15m-btn');
+
+    // A. 當「開始時間」改變時，結束時間自動 +1 小時
+    startTimeInput.addEventListener('change', () => {
+        if (startTimeInput.value) {
+            // 自動設定為 1 小時後 (60分鐘)
+            endTimeInput.value = addMinutesToTime(startTimeInput.value, 60);
+        }
+    });
+
+    // B. 點擊「+15分」按鈕
+    add15Btn.addEventListener('click', () => {
+        if (endTimeInput.value) {
+            endTimeInput.value = addMinutesToTime(endTimeInput.value, 15);
+        } else if (startTimeInput.value) {
+            // 如果結束時間是空的，就從開始時間往加 15 分
+            endTimeInput.value = addMinutesToTime(startTimeInput.value, 15);
+        }
+    });
+
+    // 新增行程 Modal 開啟
     document.querySelectorAll('.add-item-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.getElementById('modal-day').value = e.target.dataset.day;
-            itemForm.reset();
+            itemForm.reset(); 
+            // 這裡不需要改，reset() 會自動清空新的 time input
             itemModal.classList.remove('hidden');
         });
     });
@@ -245,13 +292,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     itemForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        
+        const startTime = document.getElementById('modal-start-time').value;
+        const endTime = document.getElementById('modal-end-time').value;
+
+        // 【修改點】防呆檢查：結束時間必須晚於開始時間
+        if (endTime <= startTime) {
+            alert("⚠️ 結束時間必須晚於開始時間！\n請重新調整時間。");
+            // 也可以顯示我寫在 HTML 裡的 id="time-error-msg"
+            // document.getElementById('time-error-msg').classList.remove('hidden');
+            return; // 阻止程式繼續往下跑
+        }
+
+        const combinedTime = `${startTime} - ${endTime}`;
+
         const payload = {
             day: document.getElementById('modal-day').value,
-            time_range: document.getElementById('modal-time').value,
+            time_range: combinedTime,
             title: document.getElementById('modal-title-input').value,
             details: document.getElementById('modal-details').value,
             map_link: document.getElementById('modal-map').value
         };
+
         fetch('/api/itinerary', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -263,6 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
 
     const itinerarySection = document.getElementById('itinerary');
     itinerarySection.addEventListener('click', (e) => {
