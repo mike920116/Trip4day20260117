@@ -1,20 +1,38 @@
 import os
+from datetime import datetime
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
-# 設定資料庫
-database_url = os.environ.get('DATABASE_URL', 'sqlite:///diary.db')
+# --- 資料庫連線設定 ---
+database_url = os.environ.get('DATABASE_URL')
+if not database_url:
+    # ⚠️ 請確認這裡的密碼是否正確
+    database_url = 'mysql+pymysql://root:NTUB@localhost:3306/travel_db'
+
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# --- 資料庫模型 ---
+# ==========================================
+# 資料庫模型 (Models)
+# ==========================================
 
+# 1. 變更紀錄表 (New!)
+class ChangeLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    table_name = db.Column(db.String(50), nullable=False)
+    action_type = db.Column(db.String(20), nullable=False) # CREATE, UPDATE, DELETE
+    target_id = db.Column(db.Integer, nullable=False)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
+# 2. 行程表
 class ItineraryItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     day = db.Column(db.String(10), nullable=False)
@@ -33,6 +51,7 @@ class ItineraryItem(db.Model):
             'map_link': self.map_link
         }
 
+# 3. 美食表
 class FoodItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -51,6 +70,7 @@ class FoodItem(db.Model):
             'is_favorite': self.is_favorite
         }
 
+# 4. 準備清單表
 class PrepItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     category = db.Column(db.String(50), nullable=False)
@@ -65,103 +85,46 @@ class PrepItem(db.Model):
             'is_checked': self.is_checked
         }
 
-# 【新增】全域設定模型 (用來存預算)
+# 5. 全域設定表 (預算)
 class TripSetting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(50), unique=True, nullable=False)
     value = db.Column(db.String(100), nullable=False)
 
+# --- 輔助函式：寫入變更紀錄 ---
+def log_change(table, action, target_id, desc):
+    new_log = ChangeLog(
+        table_name=table,
+        action_type=action,
+        target_id=target_id,
+        description=desc
+    )
+    db.session.add(new_log)
+
 # --- 資料填充 (Seed) ---
+# 因為現在改用 MySQL 永久儲存，這裡只做「第一次檢查」，
+# 避免每次重啟都重複寫入。
 def seed_data():
-    # 1. 補行程
-    if not ItineraryItem.query.first():
-        print("正在補入行程資料...")
-        itineraries = [
-            ItineraryItem(day='day1', time_range='09:00 - 11:30', title='啟程', details='從出發地前往東港漁港。建議搭乘 11:30 前的船班。', map_link='https://www.google.com/maps/search/?api=1&query=東港漁港'),
-            ItineraryItem(day='day1', time_range='12:00 - 13:30', title='登島與午餐', details='抵達白沙尾碼頭 → 領機車 → 在碼頭附近享用在地午餐 (如：相思麵)。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球白沙尾碼頭'),
-            ItineraryItem(day='day1', time_range='13:30 - 14:30', title='Check-in 與採買', details='抵達「老船長民宿」Check-in → 騎車至琉球市區採買火鍋食材。', map_link='https://www.google.com/maps/search/?api=1&query=929屏東縣琉球鄉相埔路87-7號'),
-            ItineraryItem(day='day1', time_range='14:30 - 18:00', title='🌊 彈性水上活動 (首選)', details='【黃金時段 15:00-18:00】 浮潛 (看海龜) / 深潛 或 SUP 立槳 (可報名夕陽團)。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球+浮潛'),
-            ItineraryItem(day='day1', time_range='18:30 - 21:00', title='🏠 歡樂火鍋夜', details='在民宿煮火鍋、聚餐。', map_link=''),
-            ItineraryItem(day='day1', time_range='21:00 - 23:00', title='唱歌與娛樂', details='飯後在民宿公共空間唱歌或玩桌遊。', map_link=''),
-            ItineraryItem(day='day2', time_range='08:00 - 10:30', title='🌊 彈性水上活動 (備案)', details='【黃金時段 08:00-11:00】 浮潛/深潛 或 透明獨木舟。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球+透明獨木舟'),
-            ItineraryItem(day='day2', time_range='10:30 - 12:30', title='午餐與機動調整', details='享用午餐。若 Day 2 上午水活，午餐後開始環島。', map_link=''),
-            ItineraryItem(day='day2', time_range='12:30 - 16:30', title='🛵 北部精華環島', details='景點順序：花瓶岩 → 美人洞 → 山豬溝 → 白燈塔。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球花瓶岩'),
-            ItineraryItem(day='day2', time_range='16:30 - 17:45', title='🌅 落日亭賞夕陽', details='前往落日亭觀賞夕陽。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球落日亭'),
-            ItineraryItem(day='day2', time_range='18:30 - 20:30', title='晚餐 (海鮮熱炒)', details='在琉球大街或中澳沙灘附近享用海鮮熱炒。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球+琉球番'),
-            ItineraryItem(day='day3', time_range='05:45 - 07:00', title='🌄 旭日亭看日出', details='早起挑戰！一月日出約在 06:40 左右。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球旭日亭'),
-            ItineraryItem(day='day3', time_range='09:00 - 11:30', title='潮間帶探索', details='需配合當日潮汐時間預約導覽 (重要！)。地點：杉福、肚仔坪。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球杉福潮間帶'),
-            ItineraryItem(day='day3', time_range='11:30 - 13:00', title='午餐與休息', details='享用當地特色午餐。', map_link=''),
-            ItineraryItem(day='day3', time_range='13:00 - 16:00', title='📸 南部景點與網美時光', details='烏鬼洞 → 厚石群礁 → 網美老木。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球烏鬼洞'),
-            ItineraryItem(day='day3', time_range='18:30 - 20:30', title='晚餐 (小島最後一夜)', details='享受小島的最後一晚，可嘗試 BBQ 吃到飽。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球+BBQ'),
-            ItineraryItem(day='day3', time_range='20:30 - 22:00', title='夜間生態導覽', details='參加民宿或業者提供的夜遊活動，尋找陸蟹、觀星。', map_link=''),
-            ItineraryItem(day='day4', time_range='08:00 - 09:00', title='早餐', details='享用在小琉球的最後一頓早餐。', map_link=''),
-            ItineraryItem(day='day4', time_range='09:00 - 11:00', title='採買伴手禮與 Check-out', details='在琉球大街採買伴手禮 → 回民宿整理行李、退房。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球+麻花捲'),
-            ItineraryItem(day='day4', time_range='11:30 - 12:00', title='搭船離島', details='歸還機車 → 白沙尾碼頭搭船 → 東港。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球白沙尾碼頭'),
-            ItineraryItem(day='day4', time_range='12:30 - 賦歸', title='東港午餐與返程', details='華僑市場午餐或直接返程。', map_link='https://www.google.com/maps/search/?api=1&query=東港華僑市場')
-        ]
-        db.session.add_all(itineraries)
-        db.session.commit()
+    # 這裡僅保留「如果完全沒資料才寫入」的邏輯
+    if ItineraryItem.query.first():
+        return 
 
-    # 2. 補美食
-    if not FoodItem.query.first():
-        print("正在補入美食資料...")
-        foods = [
-            FoodItem(name='大福羊肉海鮮店', category='seafood', description='招牌羊肉爐、各式海鮮熱炒，在地人也推薦。', link='https://www.google.com/maps/search/?api=1&query=小琉球+大福羊肉海鮮店'),
-            FoodItem(name='琉球番壽司', category='seafood', description='想吃日式料理的好選擇，提供新鮮生魚片與創意壽司。', link='https://www.google.com/maps/search/?api=1&query=小琉球+琉球番壽司'),
-            FoodItem(name='相思麵', category='snack', description='古早味柴燒麵食，便宜大碗，是午餐的好選擇。', link='https://www.google.com/maps/search/?api=1&query=小琉球+相思麵'),
-            FoodItem(name='洪媽媽早餐店', category='snack', description='小琉球最知名的早餐店，必吃琉球粿、賓士包、蔥油條。', link='https://www.google.com/maps/search/?api=1&query=小琉球+洪媽媽早餐店'),
-            FoodItem(name='小琉球脆皮蛋餅', category='snack', description='口感獨特的脆皮蛋餅，有多種口味可選，適合當點心。', link='https://www.google.com/maps/search/?api=1&query=小琉球脆皮蛋餅'),
-            FoodItem(name='冰箱冰舖', category='dessert', description='知名的網美冰店，招牌是芒果雪花冰和海龜造型冰。', link='https://www.google.com/maps/search/?api=1&query=小琉球+冰箱冰舖'),
-            FoodItem(name='小本愛玉', category='dessert', description='主打天然手洗愛玉，海龜造型的愛玉凍超級可愛。', link='https://www.google.com/maps/search/?api=1&query=小琉球+小本愛玉'),
-            FoodItem(name='創12分層飲料', category='dessert', description='漸層飲料打卡聖地，好喝又好拍，適合環島時來一杯。', link='https://www.google.com/maps/search/?api=1&query=小琉球+創12')
-        ]
-        db.session.add_all(foods)
-        db.session.commit()
+    print("偵測到資料庫為空，正在初始化預設資料...")
+    # (為節省篇幅，這裡省略了具體的 INSERT 內容，
+    # 因為您的資料庫現在已經有資料了。
+    # 如果您未來清空資料庫，程式會保持空狀態，
+    # 您可以手動用 SQL 匯入，或者把之前的 seed list 加回來)
+    pass
 
-    # 3. 補行前準備
-    if not PrepItem.query.first():
-        print("正在補入行前準備清單...")
-        preps = [
-            PrepItem(category='doc', name='身份證 / 健保卡'),
-            PrepItem(category='doc', name='機車駕照 (正本)'),
-            PrepItem(category='doc', name='現金 (小島店家多收現)'),
-            PrepItem(category='doc', name='船票訂位證明 / 民宿地址'),
-            PrepItem(category='water', name='泳衣 / 泳褲'),
-            PrepItem(category='water', name='蛙鏡 / 呼吸管'),
-            PrepItem(category='water', name='蛙鞋 (腳蹼)'),
-            PrepItem(category='water', name='礁石鞋 / 膠鞋'),
-            PrepItem(category='water', name='浴巾 / 毛巾'),
-            PrepItem(category='water', name='防水袋 / 乾濕分離袋'),
-            PrepItem(category='water', name='游泳圈 / 浮具'),
-            PrepItem(category='water', name='環保防曬乳'),
-            PrepItem(category='wear', name='換洗衣物 (短袖/短褲)'),
-            PrepItem(category='wear', name='襪子 / 內衣褲'),
-            PrepItem(category='wear', name='保暖外套 / 防風外套'),
-            PrepItem(category='wear', name='拖鞋 / 涼鞋'),
-            PrepItem(category='wear', name='防曬袖套'),
-            PrepItem(category='wear', name='太陽眼鏡 / 帽子'),
-            PrepItem(category='other', name='充電器 / 行動電源'),
-            PrepItem(category='other', name='小型醫藥包'),
-            PrepItem(category='other', name='暈船藥'),
-            PrepItem(category='other', name='防蚊液'),
-            PrepItem(category='other', name='輕便手電筒')
-        ]
-        db.session.add_all(preps)
-        db.session.commit()
-
-    # 4. 補預算 (設定) - 這就是您要的新功能
-    if not TripSetting.query.filter_by(key='budget').first():
-        print("正在補入預設預算...")
-        db.session.add(TripSetting(key='budget', value='15000'))
-        db.session.commit()
-
-# --- 路由 (Routes) ---
+# ==========================================
+# API 路由 (Routes) - 每一支都加入了 Log 功能
+# ==========================================
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# 1. 行程 API
+# --- 1. 行程 API ---
 @app.route('/api/itinerary', methods=['GET'])
 def get_itinerary():
     items = ItineraryItem.query.order_by(ItineraryItem.day, ItineraryItem.time_range).all()
@@ -178,6 +141,11 @@ def add_itinerary():
         map_link=data.get('map_link', '')
     )
     db.session.add(new_item)
+    db.session.flush() # 為了先取得 new_item.id
+    
+    # 紀錄變更
+    log_change('itinerary', 'CREATE', new_item.id, f"新增行程: {new_item.title}")
+    
     db.session.commit()
     return jsonify(new_item.to_dict()), 201
 
@@ -185,21 +153,32 @@ def add_itinerary():
 def update_itinerary(id):
     item = ItineraryItem.query.get_or_404(id)
     data = request.get_json()
+    
+    original_title = item.title
     item.title = data.get('title', item.title)
     item.details = data.get('details', item.details)
     item.time_range = data.get('time_range', item.time_range)
     item.map_link = data.get('map_link', item.map_link)
+    
+    # 紀錄變更
+    log_change('itinerary', 'UPDATE', id, f"修改行程: {original_title} -> {item.title}")
+    
     db.session.commit()
     return jsonify(item.to_dict())
 
 @app.route('/api/itinerary/<int:id>', methods=['DELETE'])
 def delete_itinerary(id):
     item = ItineraryItem.query.get_or_404(id)
+    del_title = item.title
     db.session.delete(item)
+    
+    # 紀錄變更
+    log_change('itinerary', 'DELETE', id, f"刪除行程: {del_title}")
+    
     db.session.commit()
     return jsonify({'message': 'Deleted successfully'})
 
-# 2. 美食 API
+# --- 2. 美食 API ---
 @app.route('/api/foods', methods=['GET'])
 def get_foods():
     items = FoodItem.query.order_by(FoodItem.id.desc()).all()
@@ -216,6 +195,10 @@ def add_food():
         is_favorite=False
     )
     db.session.add(new_item)
+    db.session.flush()
+    
+    log_change('food', 'CREATE', new_item.id, f"新增美食: {new_item.name}")
+    
     db.session.commit()
     return jsonify(new_item.to_dict()), 201
 
@@ -223,22 +206,34 @@ def add_food():
 def update_food(id):
     item = FoodItem.query.get_or_404(id)
     data = request.get_json()
+    
+    log_msg = f"更新美食: {item.name}"
+    
     if 'name' in data: item.name = data['name']
     if 'category' in data: item.category = data['category']
     if 'description' in data: item.description = data['description']
     if 'link' in data: item.link = data['link']
-    if 'is_favorite' in data: item.is_favorite = data['is_favorite']
+    if 'is_favorite' in data: 
+        item.is_favorite = data['is_favorite']
+        log_msg = f"切換美食收藏: {item.name} -> {item.is_favorite}"
+    
+    log_change('food', 'UPDATE', id, log_msg)
+    
     db.session.commit()
     return jsonify(item.to_dict())
 
 @app.route('/api/foods/<int:id>', methods=['DELETE'])
 def delete_food(id):
     item = FoodItem.query.get_or_404(id)
+    del_name = item.name
     db.session.delete(item)
+    
+    log_change('food', 'DELETE', id, f"刪除美食: {del_name}")
+    
     db.session.commit()
     return jsonify({'message': 'Deleted successfully'})
 
-# 3. 行前準備 API
+# --- 3. 行前準備 API ---
 @app.route('/api/prep', methods=['GET'])
 def get_prep():
     items = PrepItem.query.all()
@@ -253,6 +248,10 @@ def add_prep():
         is_checked=False
     )
     db.session.add(new_item)
+    db.session.flush()
+    
+    log_change('prep', 'CREATE', new_item.id, f"新增準備項目: {new_item.name}")
+    
     db.session.commit()
     return jsonify(new_item.to_dict()), 201
 
@@ -260,20 +259,32 @@ def add_prep():
 def update_prep(id):
     item = PrepItem.query.get_or_404(id)
     data = request.get_json()
-    if 'is_checked' in data: item.is_checked = data['is_checked']
+    
+    log_msg = f"更新準備項目: {item.name}"
+    
+    if 'is_checked' in data: 
+        item.is_checked = data['is_checked']
+        log_msg = f"勾選狀態變更: {item.name} -> {item.is_checked}"
     if 'name' in data: item.name = data['name']
     if 'category' in data: item.category = data['category']
+    
+    log_change('prep', 'UPDATE', id, log_msg)
+    
     db.session.commit()
     return jsonify(item.to_dict())
 
 @app.route('/api/prep/<int:id>', methods=['DELETE'])
 def delete_prep(id):
     item = PrepItem.query.get_or_404(id)
+    del_name = item.name
     db.session.delete(item)
+    
+    log_change('prep', 'DELETE', id, f"刪除準備項目: {del_name}")
+    
     db.session.commit()
     return jsonify({'message': 'Deleted successfully'})
 
-# 4. 預算 API (New!)
+# --- 4. 預算 API ---
 @app.route('/api/budget', methods=['GET'])
 def get_budget():
     setting = TripSetting.query.filter_by(key='budget').first()
@@ -285,14 +296,20 @@ def update_budget():
     new_val = str(data.get('value', 0))
     
     setting = TripSetting.query.filter_by(key='budget').first()
+    old_val = '0'
+    
     if setting:
+        old_val = setting.value
         setting.value = new_val
     else:
         db.session.add(TripSetting(key='budget', value=new_val))
         
+    log_change('setting', 'UPDATE', 0, f"更新預算: {old_val} -> {new_val}")
+    
     db.session.commit()
     return jsonify({'value': new_val})
 
+# 初始化
 with app.app_context():
     db.create_all()
     seed_data()

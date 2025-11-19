@@ -561,7 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 7. 預算邏輯 (New!)
+    // 7. 預算邏輯 (New! - 串接後端)
     const budgetDisplay = document.getElementById('budget-display');
     const budgetInput = document.getElementById('budget-input');
     const budgetEditBtn = document.getElementById('budget-edit');
