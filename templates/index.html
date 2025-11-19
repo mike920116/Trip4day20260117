@@ -2,18 +2,19 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-
-    <meta name="google-site-verification" content="wcRwWPM-i0RRYlA5-HVZUBBFmxjE_vp5atakICvOk1w" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <title>小琉球旅遊日記 - 4天3夜客製化行程與美食地圖 (2026版)</title>
-    
     <meta name="description" content="專為年輕人設計的小琉球自由行攻略！包含浮潛海龜、必吃美食(相思麵、起司捲)、網美景點與交通預算懶人包。提供互動式行程表，讓您輕鬆規劃 2026 小琉球之旅。">
-    
     <meta name="keywords" content="小琉球, 旅遊, 自由行, 行程規劃, 美食, 浮潛, 海龜, 交通船, 民宿, 2026">
+    
+    <meta name="google-site-verification" content="wcRwWPM-i0RRYlA5-HVZUBBFmxjE_vp5atakICvOk1w" />
 
     <script src="https://cdn.tailwindcss.com"></script>
-    </head>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
 <body class="bg-amber-50 text-gray-800">
 
     <header class="bg-white shadow-md sticky top-0 z-50">
@@ -37,6 +38,7 @@
                         </div>
                     </div>
                 </div>
+
                 <div class="hidden md:block">
                     <div class="ml-10 flex items-baseline space-x-4" id="nav-links">
                         <a class="nav-link active" data-target="overview">行程總覽</a>
@@ -46,6 +48,7 @@
                         <a class="nav-link" data-target="prep">行前準備</a>
                     </div>
                 </div>
+                
                 <div class="md:hidden">
                     <button id="mobile-menu-button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
                         <span class="sr-only">Open main menu</span>
@@ -54,6 +57,7 @@
                 </div>
             </div>
         </nav>
+        
         <div class="md:hidden hidden" id="mobile-menu">
             <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3" id="mobile-nav-links">
                 <a class="nav-link active block" data-target="overview">行程總覽</a>
@@ -107,36 +111,15 @@
                         <thead>
                             <tr>
                                 <th class="px-3 py-2">日期</th>
-                                <th class="px-3 py-2">氣溫預估 (最高/最低)</th>
-                                <th class="px-3 py-2">2024/2025 歷史範圍</th>
+                                <th class="px-3 py-2">氣溫預估</th>
                                 <th class="px-3 py-2">行動與穿搭建議</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr class="border-t">
-                                <td class="px-3 py-2">2/17 (二)</td>
-                                <td class="px-3 py-2">25.5°C / 18.5°C</td>
-                                <td class="px-3 py-2">24/19°C - 27/18°C</td>
-                                <td class="px-3 py-2">登島日：白天舒適。夜間最低 18.5°C，只需薄外套或輕薄長袖防風。</td>
-                            </tr>
-                            <tr class="border-t">
-                                <td class="px-3 py-2">2/18 (三)</td>
-                                <td class="px-3 py-2">26.5°C / 18.0°C</td>
-                                <td class="px-3 py-2">24/18°C - 29/18°C</td>
-                                <td class="px-3 py-2">活動日：氣溫更穩定，水上活動體驗更佳。</td>
-                            </tr>
-                            <tr class="border-t">
-                                <td class="px-3 py-2">2/19 (四)</td>
-                                <td class="px-3 py-2">26.0°C / 18.5°C</td>
-                                <td class="px-3 py-2">23/17°C - 29/20°C</td>
-                                <td class="px-3 py-2">黃金時段：溫暖，適合全天環島。</td>
-                            </tr>
-                            <tr class="border-t">
-                                <td class="px-3 py-2">2/20 (五)</td>
-                                <td class="px-3 py-2">26.5°C / 20.0°C</td>
-                                <td class="px-3 py-2">23/17°C - 30/23°C</td>
-                                <td class="px-3 py-2">賦歸日：天氣溫暖，夜間最低 20°C，體感極為舒適。</td>
-                            </tr>
+                            <tr class="border-t"><td class="px-3 py-2">2/17 (二)</td><td class="px-3 py-2">25.5°C / 18.5°C</td><td class="px-3 py-2">白天舒適，夜間微涼需薄外套。</td></tr>
+                            <tr class="border-t"><td class="px-3 py-2">2/18 (三)</td><td class="px-3 py-2">26.5°C / 18.0°C</td><td class="px-3 py-2">氣溫穩定，適合水上活動。</td></tr>
+                            <tr class="border-t"><td class="px-3 py-2">2/19 (四)</td><td class="px-3 py-2">26.0°C / 18.5°C</td><td class="px-3 py-2">溫暖舒適，適合環島。</td></tr>
+                            <tr class="border-t"><td class="px-3 py-2">2/20 (五)</td><td class="px-3 py-2">26.5°C / 20.0°C</td><td class="px-3 py-2">天氣極佳，賦歸日。</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -145,54 +128,154 @@
 
         <section id="transport" class="page-section hidden">
             <h2 class="text-3xl font-bold text-cyan-800 mb-6">交通與住宿詳情</h2>
+            
             <div class="bg-white p-6 rounded-lg shadow-lg mb-8">
                 <h3 class="text-2xl font-semibold text-cyan-700 mb-4">第一階段：台北南港 → 東港漁港</h3>
-                <p class="text-gray-700 mb-6">我們比較了三種主要的交通方式...</p>
+                <p class="text-gray-700 mb-6">我們比較了三種主要的交通方式，您可以根據時間與預算考量來選擇。圖表顯示了預估的「總時長」與「單人總花費」。</p>
                 <div class="chart-container mb-6">
                     <canvas id="transportChart"></canvas>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div>
                         <h4 class="font-bold text-lg text-cyan-800">🚄 方案一：高鐵 (最快)</h4>
-                        <p>高鐵南港站 → 高鐵左營站 (約 1.5 - 2 小時)</p>
-                        <p>標準車廂全票：NT$ 1,530</p>
+                        <p><strong>路線：</strong>高鐵南港站 → 高鐵左營站</p>
+                        <p><strong>交通時間：</strong>約 1.5 - 2 小時 (高鐵車程)</p>
+                        <p class="mt-2"><strong>高鐵票價（最新）：</strong></p>
+                        <div class="overflow-x-auto text-sm">
+                            <table class="min-w-full text-sm text-left border">
+                                <thead>
+                                    <tr class="bg-gray-50">
+                                        <th class="px-3 py-2">車廂</th>
+                                        <th class="px-3 py-2">全票</th>
+                                        <th class="px-3 py-2">孩童/敬老/愛心</th>
+                                        <th class="px-3 py-2">團體票</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-t">
+                                        <td class="px-3 py-2">標準車廂</td>
+                                        <td class="px-3 py-2">NT$ 1,530</td>
+                                        <td class="px-3 py-2">NT$ 765</td>
+                                        <td class="px-3 py-2">NT$ 1,450</td>
+                                    </tr>
+                                    <tr class="border-t">
+                                        <td class="px-3 py-2">商務車廂</td>
+                                        <td class="px-3 py-2">NT$ 2,500</td>
+                                        <td class="px-3 py-2">NT$ 1,250</td>
+                                        <td class="px-3 py-2">NT$ 2,375</td>
+                                    </tr>
+                                    <tr class="border-t">
+                                        <td class="px-3 py-2">自由座車廂</td>
+                                        <td class="px-3 py-2">NT$ 1,480</td>
+                                        <td class="px-3 py-2">NT$ 740</td>
+                                        <td class="px-3 py-2">-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     <div>
                         <h4 class="font-bold text-lg text-cyan-800">🚆 方案二：台鐵 (經濟)</h4>
-                        <p>台鐵南港站 → 台鐵高雄站 (約 4 - 5 小時)</p>
-                        <p>全票：約 $845 - $891</p>
+                        <p><strong>路線：</strong>台鐵南港站 → 台鐵高雄站</p>
+                        <p><strong>交通：</strong>(普悠瑪/自強, 約 4 - 5 小時, $845 - $891)</p>
+                        <p><strong>轉乘：</strong>於高雄車站搭乘客運 (高雄客運) 或共乘計程車至東港漁港 (約 60 分鐘, $150 - $300)</p>
+                        <p class="font-semibold mt-2"><strong>總計：</strong>約 5 - 6 小時 | $1000 - $1200</p>
                     </div>
                     <div>
                         <h4 class="font-bold text-lg text-cyan-800">🚗 方案三：自行開車 (彈性)</h4>
-                        <p>國道1號 → 國道3號 → 東港</p>
-                        <p>需考量油資與過夜停車費</p>
+                        <p><strong>路線：</strong>國道1號 → 88快速道路 → 國道3號 → 林邊交流道 → 東港</p>
+                        <p><strong>交通：</strong>(約 4.5 - 5.5 小時)</p>
+                        <p><strong>轉乘：</strong>需在東港漁港附近尋找收費停車場 (過夜停車約 $200-$300/天)</p>
+                        <p class="font-semibold mt-2"><strong>總計：</strong>約 5 - 6 小時 | $1500 (油資過路費) + $900 (停車)</p>
                     </div>
                 </div>
             </div>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="bg-white p-6 rounded-lg shadow-lg">
                     <h3 class="text-xl font-semibold text-cyan-700 mb-3">第二階段：東港 ⇌ 小琉球</h3>
-                    <p class="text-gray-600">來回船票 (全票)：約 NT$ 390</p>
-                    <p class="text-gray-600 mt-2">建議提早預訂船票並搭乘 11:30 前的船班登島。</p>
+                    <p class="text-gray-600"><strong>交通：</strong>民營交通船 (推薦：東琉線、泰富)</p>
+                    <p class="text-gray-600"><strong>航程：</strong>約 25 - 30 分鐘</p>
+                    <p class="mt-2"><strong>船票（最新確認）：</strong></p>
+                    <div class="overflow-x-auto text-sm">
+                        <table class="min-w-full text-sm text-left border">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="px-3 py-2">票種</th>
+                                    <th class="px-3 py-2">張數</th>
+                                    <th class="px-3 py-2">單價（來回）</th>
+                                    <th class="px-3 py-2">小計</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-t">
+                                    <td class="px-3 py-2">全票</td>
+                                    <td class="px-3 py-2">14 張</td>
+                                    <td class="px-3 py-2">NT$ 390</td>
+                                    <td class="px-3 py-2">NT$ 5,460</td>
+                                </tr>
+                                <tr class="border-t">
+                                    <td class="px-3 py-2">敬老 / 半票</td>
+                                    <td class="px-3 py-2">1 張</td>
+                                    <td class="px-3 py-2">NT$ 210</td>
+                                    <td class="px-3 py-2">NT$ 210</td>
+                                </tr>
+                                <tr class="border-t font-semibold">
+                                    <td class="px-3 py-2">總計</td>
+                                    <td class="px-3 py-2">-</td>
+                                    <td class="px-3 py-2">-</td>
+                                    <td class="px-3 py-2">NT$ 5,670</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-gray-600 font-medium mt-2"><strong>建議：</strong>請依人數確認張數並於線上或現場驗票；建議提早預訂船票並搭乘 11:30 前的船班登島。</p>
+                    <a href="https://www.google.com/maps/search/?api=1&query=東港漁港" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-2 inline-block">
+                        查看東港漁港位置 ↗
+                    </a>
                 </div>
                 <div class="bg-white p-6 rounded-lg shadow-lg">
                     <h3 class="text-xl font-semibold text-cyan-700 mb-3">第三階段：島上交通</h3>
-                    <p class="text-gray-600">機車 (活力125) 72小時：約 NT$ 1,100 / 台</p>
+                    <p class="text-gray-600"><strong>交通：</strong>租賃機車（活力125，新車）</p>
+                    <p class="text-gray-600"><strong>期間範例：</strong>4 天 3 夜（共 72 小時）</p>
+                    <p class="mt-2"><strong>價格說明：</strong></p>
+                    <div class="overflow-x-auto text-sm">
+                        <table class="min-w-full text-sm text-left border">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="px-3 py-2">項目</th>
+                                    <th class="px-3 py-2">單位價格</th>
+                                    <th class="px-3 py-2">數量</th>
+                                    <th class="px-3 py-2">小計</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-t">
+                                    <td class="px-3 py-2">機車（活力125）72 小時</td>
+                                    <td class="px-3 py-2">NT$ 1,100 / 台</td>
+                                    <td class="px-3 py-2">1 台</td>
+                                    <td class="px-3 py-2">NT$ 1,100</td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-gray-600 font-medium mt-2"><strong>備註：</strong>單台 72 小時價格為 NT$1,100；若逾時，每小時以 NT$50 計（優惠價），最高額外收費為 NT$200。建議事先與租車行確認車況與保險規定。</p>
                 </div>
                 <div class="bg-white p-6 rounded-lg shadow-lg">
                     <h3 class="text-xl font-semibold text-cyan-700 mb-3">住宿資訊</h3>
                     <p class="text-gray-600 font-medium">老船長特色民宿</p>
                     <p class="text-gray-600">929屏東縣琉球鄉相埔路87-7號</p>
+                    <a href="https://www.google.com/maps/search/?api=1&query=929屏東縣琉球鄉相埔路87-7號" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-2 inline-block">
+                        在 Google Maps 上查看 ↗
+                    </a>
                 </div>
             </div>
         </section>
 
         <section id="itinerary" class="page-section hidden">
             <h2 class="text-3xl font-bold text-cyan-800 mb-4">每日行程</h2>
-            <p class="text-gray-700 mb-6">
-                點擊「編輯」修改內容，或在底部「新增行程」。
-            </p>
+            <p class="text-gray-700 mb-6">點擊「編輯」修改內容，或在底部「新增行程」。搜尋框可快速過濾行程。</p>
             
             <div class="bg-gray-100 rounded-t-lg">
                 <nav class="flex space-x-1" id="day-tabs">
@@ -206,118 +289,27 @@
             <div class="bg-white p-6 rounded-b-lg shadow-lg">
                 <div id="day1-content" class="day-content active">
                     <div class="timeline-container">
-                        <div class="timeline-item">
-                            <div class="flex items-center mb-1">
-                                <span class="time-display font-semibold text-cyan-700 text-lg">09:00 - 11:30</span>
-                                <input type="text" class="time-edit hidden form-input w-full" value="09:00 - 11:30">
-                            </div>
-                            <div class="ml-1">
-                                <div class="item-display">
-                                    <h4 class="title-display font-bold text-xl text-gray-900">啟程</h4>
-                                    <p class="details-display text-gray-600">從出發地前往東港漁港。建議搭乘 11:30 前的船班。</p>
-                                </div>
-                                <div class="item-edit hidden space-y-2">
-                                    <input type="text" class="title-edit form-input w-full" value="啟程">
-                                    <textarea class="details-edit form-input w-full">從出發地前往東港漁港。建議搭乘 11:30 前的船班。</textarea>
-                                    <input type="text" class="map-edit form-input w-full" value="">
-                                </div>
-                            </div>
-                            <div class="item-controls mt-2 space-x-2">
-                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
-                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
-                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
-                            </div>
-                        </div>
                         <div class="text-center mt-6">
                             <button class="add-item-btn bg-cyan-600 text-white px-4 py-2 rounded-md hover:bg-cyan-700" data-day="day1">＋ 新增行程</button>
                         </div>
                     </div>
                 </div>
-
                 <div id="day2-content" class="day-content hidden">
                     <div class="timeline-container">
-                        <div class="timeline-item">
-                            <div class="flex items-center mb-1">
-                                <span class="time-display font-semibold text-cyan-700 text-lg">12:30 - 16:30</span>
-                                <input type="text" class="time-edit hidden form-input w-full" value="12:30 - 16:30">
-                            </div>
-                            <div class="ml-1">
-                                <div class="item-display">
-                                    <h4 class="title-display font-bold text-xl text-gray-900">🛵 北部精華環島</h4>
-                                    <p class="details-display text-gray-600">景點順序：花瓶岩 → 美人洞 → 山豬溝 → 白燈塔。</p>
-                                </div>
-                                <div class="item-edit hidden space-y-2">
-                                    <input type="text" class="title-edit form-input w-full" value="🛵 北部精華環島">
-                                    <textarea class="details-edit form-input w-full">景點順序：花瓶岩 → 美人洞 → 山豬溝 → 白燈塔。</textarea>
-                                    <input type="text" class="map-edit form-input w-full" value="">
-                                </div>
-                            </div>
-                            <div class="item-controls mt-2 space-x-2">
-                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
-                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
-                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
-                            </div>
-                        </div>
                         <div class="text-center mt-6">
                             <button class="add-item-btn bg-cyan-600 text-white px-4 py-2 rounded-md hover:bg-cyan-700" data-day="day2">＋ 新增行程</button>
                         </div>
                     </div>
                 </div>
-                
                 <div id="day3-content" class="day-content hidden">
                     <div class="timeline-container">
-                        <div class="timeline-item">
-                            <div class="flex items-center mb-1">
-                                <span class="time-display font-semibold text-cyan-700 text-lg">09:00 - 11:30</span>
-                                <input type="text" class="time-edit hidden form-input w-full" value="09:00 - 11:30">
-                            </div>
-                            <div class="ml-1">
-                                <div class="item-display">
-                                    <h4 class="title-display font-bold text-xl text-gray-900">潮間帶探索</h4>
-                                    <p class="details-display text-gray-600">需配合當日潮汐時間預約導覽。</p>
-                                </div>
-                                <div class="item-edit hidden space-y-2">
-                                    <input type="text" class="title-edit form-input w-full" value="潮間帶探索">
-                                    <textarea class="details-edit form-input w-full">需配合當日潮汐時間預約導覽。</textarea>
-                                    <input type="text" class="map-edit form-input w-full" value="">
-                                </div>
-                            </div>
-                            <div class="item-controls mt-2 space-x-2">
-                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
-                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
-                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
-                            </div>
-                        </div>
                         <div class="text-center mt-6">
                             <button class="add-item-btn bg-cyan-600 text-white px-4 py-2 rounded-md hover:bg-cyan-700" data-day="day3">＋ 新增行程</button>
                         </div>
                     </div>
                 </div>
-
                 <div id="day4-content" class="day-content hidden">
                     <div class="timeline-container">
-                        <div class="timeline-item">
-                            <div class="flex items-center mb-1">
-                                <span class="time-display font-semibold text-cyan-700 text-lg">09:00 - 11:00</span>
-                                <input type="text" class="time-edit hidden form-input w-full" value="09:00 - 11:00">
-                            </div>
-                            <div class="ml-1">
-                                <div class="item-display">
-                                    <h4 class="title-display font-bold text-xl text-gray-900">採買伴手禮與 Check-out</h4>
-                                    <p class="details-display text-gray-600">買麻花捲，回民宿退房。</p>
-                                </div>
-                                <div class="item-edit hidden space-y-2">
-                                    <input type="text" class="title-edit form-input w-full" value="採買伴手禮與 Check-out">
-                                    <textarea class="details-edit form-input w-full">買麻花捲，回民宿退房。</textarea>
-                                    <input type="text" class="map-edit form-input w-full" value="">
-                                </div>
-                            </div>
-                             <div class="item-controls mt-2 space-x-2">
-                                <button class="edit-btn text-xs text-blue-500 hover:text-blue-700">編輯</button>
-                                <button class="save-btn hidden text-xs text-green-500 hover:text-green-700">儲存</button>
-                                <button class="delete-btn text-xs text-red-500 hover:text-red-700">刪除</button>
-                            </div>
-                        </div>
                         <div class="text-center mt-6">
                             <button class="add-item-btn bg-cyan-600 text-white px-4 py-2 rounded-md hover:bg-cyan-700" data-day="day4">＋ 新增行程</button>
                         </div>
@@ -335,55 +327,26 @@
                     <button class="filter-button px-3 py-1 rounded-md" data-filter="snack">在地小吃</button>
                     <button class="filter-button px-3 py-1 rounded-md" data-filter="dessert">甜點/飲料</button>
                 </div>
-                <div>
-                    </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="food-grid">
-                <div class="food-card bg-white rounded-lg shadow-lg overflow-hidden" data-category="seafood">
-                    <div class="p-5">
-                        <span class="text-xs font-semibold bg-cyan-100 text-cyan-800 px-2 py-1 rounded-full">海鮮/正餐</span>
-                        <h3 class="text-xl font-bold text-gray-900 mt-2">大福羊肉海鮮店</h3>
-                        <p class="text-gray-600 text-sm mt-1">招牌羊肉爐、各式海鮮熱炒。</p>
-                    </div>
                 </div>
-                <div class="food-card bg-white rounded-lg shadow-lg overflow-hidden" data-category="snack">
-                    <div class="p-5">
-                        <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-1 rounded-full">在地小吃</span>
-                        <h3 class="text-xl font-bold text-gray-900 mt-2">相思麵</h3>
-                        <p class="text-gray-600 text-sm mt-1">古早味柴燒麵食，便宜大碗。</p>
-                    </div>
-                </div>
-                 <div class="food-card bg-white rounded-lg shadow-lg overflow-hidden" data-category="dessert">
-                    <div class="p-5">
-                        <span class="text-xs font-semibold bg-pink-100 text-pink-800 px-2 py-1 rounded-full">甜點/飲料</span>
-                        <h3 class="text-xl font-bold text-gray-900 mt-2">冰箱冰舖</h3>
-                        <p class="text-gray-600 text-sm mt-1">招牌芒果雪花冰。</p>
-                    </div>
-                </div>
-            </div>
         </section>
 
         <section id="prep" class="page-section hidden">
-            <h2 class="text-3xl font-bold text-cyan-800 mb-6">行前準備清單</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-white p-6 rounded-lg shadow-lg">
-                    <h3 class="text-xl font-semibold text-cyan-700 mb-4">重要證件</h3>
-                    <ul class="space-y-2 text-gray-600">
-                        <li>✔ 身份證 / 健保卡</li>
-                        <li>✔ 機車駕照</li>
-                        <li>✔ 現金</li>
-                    </ul>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-lg">
-                    <h3 class="text-xl font-semibold text-cyan-700 mb-4">水上活動</h3>
-                    <ul class="space-y-2 text-gray-600">
-                        <li>✔ 泳衣 / 泳褲</li>
-                        <li>✔ 浴巾</li>
-                        <li>✔ 環保防曬乳</li>
-                    </ul>
-                </div>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-cyan-800">行前準備清單</h2>
+                <button id="add-prep-btn" class="bg-cyan-600 text-white px-4 py-2 rounded-md hover:bg-cyan-700 transition shadow-sm flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    新增項目
+                </button>
             </div>
+            <p class="text-gray-700 mb-8">
+                點擊項目可標記為「已完成」，點擊垃圾桶可刪除。出發前檢查一次，確保萬無一失！
+            </p>
+            
+            <div id="prep-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                </div>
         </section>
 
     </main>
@@ -395,23 +358,58 @@
                 <input type="hidden" id="modal-day" value="">
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700">時間</label>
-                    <input type="text" id="modal-time" class="mt-1 block w-full border rounded-md shadow-sm">
+                    <input type="text" id="modal-time" class="mt-1 block w-full border rounded-md shadow-sm px-3 py-2" placeholder="例如 10:00 - 12:00">
                 </div>
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700">活動標題</label>
-                    <input type="text" id="modal-title-input" class="mt-1 block w-full border rounded-md shadow-sm">
+                    <input type="text" id="modal-title-input" class="mt-1 block w-full border rounded-md shadow-sm px-3 py-2" required>
                 </div>
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700">詳細內容</label>
-                    <textarea id="modal-details" rows="3" class="mt-1 block w-full border rounded-md shadow-sm"></textarea>
+                    <textarea id="modal-details" rows="3" class="mt-1 block w-full border rounded-md shadow-sm px-3 py-2"></textarea>
                 </div>
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700">地圖連結 (選填)</label>
-                    <input type="text" id="modal-map" class="mt-1 block w-full border rounded-md shadow-sm">
+                    <input type="text" id="modal-map" class="mt-1 block w-full border rounded-md shadow-sm px-3 py-2">
                 </div>
                 <div class="flex justify-end space-x-3">
-                    <button type="button" id="modal-cancel" class="bg-gray-200 px-4 py-2 rounded-md">取消</button>
+                    <button type="button" id="modal-cancel" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md">取消</button>
                     <button type="submit" id="modal-save" class="bg-cyan-600 text-white px-4 py-2 rounded-md">儲存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="food-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold mb-4">新增美食</h3>
+            <p class="text-gray-500">目前尚未開放前端新增美食功能，請聯繫管理員。</p>
+            <div class="flex justify-end mt-4">
+                <button onclick="document.getElementById('food-modal').classList.add('hidden')" class="bg-gray-200 px-4 py-2 rounded-md">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="prep-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3 class="text-2xl font-bold mb-4">新增準備清單</h3>
+            <form id="prep-form">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">類別</label>
+                    <select id="prep-category" class="mt-1 block w-full border rounded-md shadow-sm px-3 py-2">
+                        <option value="doc">重要證件 / 金錢</option>
+                        <option value="water">水上活動用品</option>
+                        <option value="wear">衣物與穿搭</option>
+                        <option value="other">3C / 藥品 / 其他</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">項目名稱</label>
+                    <input type="text" id="prep-name" class="mt-1 block w-full border rounded-md shadow-sm px-3 py-2" placeholder="例如：GoPro" required>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="prep-modal-cancel" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">取消</button>
+                    <button type="submit" class="bg-cyan-600 text-white px-4 py-2 rounded-md hover:bg-cyan-700">新增</button>
                 </div>
             </form>
         </div>

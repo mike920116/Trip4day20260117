@@ -1,14 +1,10 @@
-
-
 document.addEventListener('DOMContentLoaded', () => {
     
-    // 全域變數：用來儲存從資料庫抓回來的原始資料
+    // 全域變數
     let globalItineraries = [];
     let globalFoods = [];
 
-    // ==========================================
-    // 1. 初始化 Chart.js (交通圖表 - 保持靜態)
-    // ==========================================
+    // 1. 初始化 Chart.js (交通圖表)
     const transportCtx = document.getElementById('transportChart').getContext('2d');
     new Chart(transportCtx, {
         type: 'bar',
@@ -61,9 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ==========================================
     // 2. 導覽列與頁籤邏輯
-    // ==========================================
     const navLinks = document.querySelectorAll('.nav-link');
     const pageSections = document.querySelectorAll('.page-section');
     const mobileMenuButton = document.getElementById('mobile-menu-button');
@@ -104,22 +98,18 @@ document.addEventListener('DOMContentLoaded', () => {
         activateTab(btn);
     });
 
-    // ==========================================
-    // 3. 搜尋功能邏輯 (New!)
-    // ==========================================
+    // 3. 搜尋功能邏輯
     const searchInput = document.getElementById('search-input');
 
     searchInput.addEventListener('input', (e) => {
         const keyword = e.target.value.trim().toLowerCase();
         
-        // 1. 過濾行程
         const filteredItineraries = globalItineraries.filter(item => 
             item.title.toLowerCase().includes(keyword) || 
             item.details.toLowerCase().includes(keyword)
         );
         renderTimeline(filteredItineraries);
 
-        // 2. 過濾美食
         const filteredFoods = globalFoods.filter(item => 
             item.name.toLowerCase().includes(keyword) || 
             item.description.toLowerCase().includes(keyword) ||
@@ -128,42 +118,36 @@ document.addEventListener('DOMContentLoaded', () => {
             (item.category === 'dessert' && '甜點'.includes(keyword))
         );
         renderFoodGrid(filteredFoods);
-        
-        // 小優化：如果搜尋有結果，自動跳轉到相關分頁？
-        // 這裡暫時不強制跳轉，讓使用者自己切換查看
     });
 
-    // ==========================================
-    // 4. 資料讀取與渲染 (Fetch & Render)
-    // ==========================================
+    // 4. 資料讀取與渲染
 
-    // --- A. 行程部分 ---
+    // 行程部分
     function fetchItinerary() {
         fetch('/api/itinerary')
             .then(response => response.json())
             .then(data => {
-                globalItineraries = data; // 存入全域變數
-                renderTimeline(data);     // 初始渲染
+                globalItineraries = data;
+                renderTimeline(data);
             })
             .catch(err => console.error('無法讀取行程:', err));
     }
 
     function renderTimeline(items) {
-        // 1. 先清空目前畫面上 4 個天數裡面的舊行程 (保留按鈕)
         ['day1', 'day2', 'day3', 'day4'].forEach(day => {
             const container = document.querySelector(`#${day}-content .timeline-container`);
-            // 移除所有 timeline-item，但保留 add-item-btn
-            const existingItems = container.querySelectorAll('.timeline-item');
-            existingItems.forEach(item => item.remove());
+            if(container) {
+                const existingItems = container.querySelectorAll('.timeline-item');
+                existingItems.forEach(item => item.remove());
+            }
         });
 
-        // 2. 重新繪製
         items.forEach(item => {
             const container = document.querySelector(`#${item.day}-content .timeline-container`);
             if (container) {
                 const html = createTimelineItemHTML(item);
-                const addBtnDiv = container.querySelector('.text-center'); // 找到按鈕容器
-                addBtnDiv.insertAdjacentHTML('beforebegin', html); // 插在按鈕前面
+                const addBtnDiv = container.querySelector('.text-center');
+                addBtnDiv.insertAdjacentHTML('beforebegin', html);
             }
         });
     }
@@ -199,19 +183,19 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>`;
     }
 
-    // --- B. 美食部分 ---
+    // 美食部分
     function fetchFood() {
         fetch('/api/foods')
             .then(res => res.json())
             .then(data => {
-                globalFoods = data; // 存入全域變數
+                globalFoods = data;
                 renderFoodGrid(data);
             });
     }
 
     function renderFoodGrid(items) {
         const grid = document.getElementById('food-grid');
-        grid.innerHTML = ''; // 清空
+        grid.innerHTML = '';
 
         if (items.length === 0) {
             grid.innerHTML = '<p class="text-gray-500 col-span-3 text-center py-10">沒有找到符合的美食...</p>';
@@ -235,28 +219,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 美食篩選按鈕 (原本的功能)
     document.getElementById('food-filters').addEventListener('click', (e) => {
         if (e.target.matches('.filter-button')) {
             const filter = e.target.dataset.filter;
             document.querySelectorAll('#food-filters .filter-button').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
             
-            // 使用目前的搜尋關鍵字來二次過濾，或重置
-            // 為求簡單，點擊分類按鈕時，我們暫時忽略搜尋框，直接顯示該分類
-            // 如果要連動，可以在這裡讀取 searchInput.value
             const filteredByCat = filter === 'all' ? globalFoods : globalFoods.filter(x => x.category === filter);
             renderFoodGrid(filteredByCat);
         }
     });
 
-    // ==========================================
     // 5. 編輯/新增/刪除 互動邏輯
-    // ==========================================
     const itemModal = document.getElementById('item-modal');
     const itemForm = document.getElementById('item-form');
 
-    // 新增行程
     document.querySelectorAll('.add-item-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.getElementById('modal-day').value = e.target.dataset.day;
@@ -282,12 +259,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }).then(response => {
             if (response.ok) {
                 itemModal.classList.add('hidden');
-                fetchItinerary(); // 重新讀取
+                fetchItinerary();
             }
         });
     });
 
-    // 編輯與刪除
     const itinerarySection = document.getElementById('itinerary');
     itinerarySection.addEventListener('click', (e) => {
         const target = e.target;
@@ -319,7 +295,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 timelineItem.querySelector('.title-display').innerText = updatedItem.title;
                 timelineItem.querySelector('.details-display').innerText = updatedItem.details;
                 timelineItem.querySelector('.time-display').innerText = updatedItem.time_range;
-                // (此處省略地圖連結更新DOM邏輯以保持簡潔，若需要可加回)
                 toggleEditSave(timelineItem, false);
             });
         }
@@ -333,8 +308,107 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // 啟動
+    // 6. 行前準備清單邏輯 (New! 這是您缺少的)
     // ==========================================
+    
+    const prepGrid = document.getElementById('prep-grid');
+    
+    function loadPrep() {
+        fetch('/api/prep')
+            .then(res => res.json())
+            .then(data => {
+                renderPrepList(data);
+            });
+    }
+
+    function renderPrepList(items) {
+        prepGrid.innerHTML = '';
+        
+        const categories = [
+            { id: 'doc', title: '🪪 重要證件', color: 'border-cyan-500' },
+            { id: 'water', title: '🌊 水上活動', color: 'border-blue-500' },
+            { id: 'wear', title: '👕 衣物穿搭', color: 'border-amber-500' },
+            { id: 'other', title: '🔌 3C 與其他', color: 'border-gray-400' }
+        ];
+
+        categories.forEach(cat => {
+            const catItems = items.filter(i => i.category === cat.id);
+            
+            const sectionHtml = `
+            <div class="bg-white rounded-lg shadow-md overflow-hidden flex flex-col h-full">
+                <div class="bg-gray-50 px-4 py-3 border-t-4 ${cat.color} flex justify-between items-center">
+                    <h3 class="font-bold text-gray-800">${cat.title}</h3>
+                    <span class="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border">${catItems.filter(i=>i.is_checked).length}/${catItems.length}</span>
+                </div>
+                <ul class="divide-y divide-gray-100 flex-1">
+                    ${catItems.length ? catItems.map(item => `
+                        <li class="prep-item group flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition cursor-pointer ${item.is_checked ? 'bg-gray-50' : ''}" data-id="${item.id}">
+                            <div class="flex items-center flex-1" onclick="togglePrep(${item.id}, ${!item.is_checked})">
+                                <div class="w-5 h-5 rounded border ${item.is_checked ? 'bg-cyan-500 border-cyan-500' : 'border-gray-300 bg-white'} flex items-center justify-center mr-3 transition">
+                                    ${item.is_checked ? '<svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
+                                </div>
+                                <span class="${item.is_checked ? 'text-gray-400 line-through' : 'text-gray-700'} select-none">${item.name}</span>
+                            </div>
+                            <button onclick="deletePrep(${item.id})" class="text-gray-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </li>
+                    `).join('') : '<li class="px-4 py-8 text-center text-gray-400 text-sm">尚無項目</li>'}
+                </ul>
+            </div>
+            `;
+            prepGrid.insertAdjacentHTML('beforeend', sectionHtml);
+        });
+    }
+
+    window.togglePrep = function(id, newStatus) {
+        fetch(`/api/prep/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_checked: newStatus })
+        }).then(() => loadPrep());
+    };
+
+    window.deletePrep = function(id) {
+        if(confirm('確定要刪除此項目嗎？')) {
+            fetch(`/api/prep/${id}`, { method: 'DELETE' })
+            .then(() => loadPrep());
+        }
+    };
+
+    // 新增清單 Modal 邏輯
+    const prepModal = document.getElementById('prep-modal');
+    const prepForm = document.getElementById('prep-form');
+    
+    document.getElementById('add-prep-btn').addEventListener('click', () => {
+        prepForm.reset();
+        prepModal.classList.remove('hidden');
+    });
+    
+    document.getElementById('prep-modal-cancel').addEventListener('click', () => {
+        prepModal.classList.add('hidden');
+    });
+
+    prepForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const payload = {
+            category: document.getElementById('prep-category').value,
+            name: document.getElementById('prep-name').value
+        };
+        fetch('/api/prep', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(res => {
+            if (res.ok) {
+                prepModal.classList.add('hidden');
+                loadPrep();
+            }
+        });
+    });
+
+    // 啟動
+    loadPrep(); // <--- 這一行非常重要，您之前可能少了它
     fetchItinerary();
     fetchFood();
     switchPage('overview');
