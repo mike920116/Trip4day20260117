@@ -16,6 +16,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${newH}:${newM}`;
     }
 
+    // --- 金額格式化小工具 ---
+    function formatCurrency(n) {
+        return 'NT$ ' + new Intl.NumberFormat('zh-TW').format(n);
+    }
+
     // 1. 初始化 Chart.js
     const transportCtx = document.getElementById('transportChart').getContext('2d');
     new Chart(transportCtx, {
@@ -25,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
             datasets: [
                 {
                     label: '預估總時長 (小時)',
-                    data: [3.25, 5.5, 9.5], 
+                    data: [3.25, 5.5, 5.5], 
                     backgroundColor: 'rgba(6, 182, 212, 0.6)', 
                     borderColor: 'rgba(6, 182, 212, 1)',
                     borderWidth: 1,
@@ -33,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 {
                     label: '預估總花費 (NT$)',
-                    data: [2900, 1700, 1400], 
+                    data: [1900, 1100, 2400], 
                     backgroundColor: 'rgba(245, 158, 11, 0.6)', 
                     borderColor: 'rgba(245, 158, 11, 1)',
                     borderWidth: 1,
@@ -318,8 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 美食部分 (大升級) ---
-    
+    // --- 美食部分 ---
     function fetchFood() {
         fetch('/api/foods')
             .then(res => res.json())
@@ -388,8 +392,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 美食互動邏輯 (掛載到 window) ---
-    
     window.toggleFavorite = function(id, newStatus) {
         fetch(`/api/foods/${id}`, {
             method: 'PUT',
@@ -559,7 +561,64 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // 7. 預算邏輯 (New!)
+    const budgetDisplay = document.getElementById('budget-display');
+    const budgetInput = document.getElementById('budget-input');
+    const budgetEditBtn = document.getElementById('budget-edit');
+    const budgetSaveBtn = document.getElementById('budget-save');
+    const budgetCancelBtn = document.getElementById('budget-cancel');
+
+    function loadBudget() {
+        fetch('/api/budget')
+            .then(res => res.json())
+            .then(data => {
+                budgetDisplay.innerText = formatCurrency(data.value);
+            });
+    }
+
+    budgetEditBtn.addEventListener('click', () => {
+        const valStr = budgetDisplay.innerText.replace(/[^0-9]/g, '');
+        budgetInput.value = valStr;
+        budgetDisplay.classList.add('hidden');
+        budgetInput.classList.remove('hidden');
+        budgetEditBtn.classList.add('hidden');
+        budgetSaveBtn.classList.remove('hidden');
+        budgetCancelBtn.classList.remove('hidden');
+        budgetInput.focus();
+    });
+
+    budgetCancelBtn.addEventListener('click', () => {
+        budgetInput.classList.add('hidden');
+        budgetDisplay.classList.remove('hidden');
+        budgetEditBtn.classList.remove('hidden');
+        budgetSaveBtn.classList.add('hidden');
+        budgetCancelBtn.classList.add('hidden');
+    });
+
+    budgetSaveBtn.addEventListener('click', () => {
+        const val = Number(budgetInput.value);
+        if (isNaN(val) || val < 0) {
+            alert('請輸入有效的數字金額');
+            return;
+        }
+        
+        fetch('/api/budget', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ value: val })
+        }).then(res => res.json())
+        .then(data => {
+            budgetDisplay.innerText = formatCurrency(data.value);
+            budgetInput.classList.add('hidden');
+            budgetDisplay.classList.remove('hidden');
+            budgetEditBtn.classList.remove('hidden');
+            budgetSaveBtn.classList.add('hidden');
+            budgetCancelBtn.classList.add('hidden');
+        });
+    });
+
     // 啟動
+    loadBudget();
     loadPrep(); 
     fetchItinerary();
     fetchFood();

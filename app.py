@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
-# 設定資料庫 (適配 Zeabur PostgreSQL 與本地 SQLite)
+# 設定資料庫
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///diary.db')
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -64,6 +64,12 @@ class PrepItem(db.Model):
             'name': self.name,
             'is_checked': self.is_checked
         }
+
+# 【新增】全域設定模型 (用來存預算)
+class TripSetting(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), unique=True, nullable=False)
+    value = db.Column(db.String(100), nullable=False)
 
 # --- 資料填充 (Seed) ---
 def seed_data():
@@ -143,6 +149,12 @@ def seed_data():
         db.session.add_all(preps)
         db.session.commit()
 
+    # 4. 補預算 (設定) - 這就是您要的新功能
+    if not TripSetting.query.filter_by(key='budget').first():
+        print("正在補入預設預算...")
+        db.session.add(TripSetting(key='budget', value='15000'))
+        db.session.commit()
+
 # --- 路由 (Routes) ---
 
 @app.route('/')
@@ -187,10 +199,9 @@ def delete_itinerary(id):
     db.session.commit()
     return jsonify({'message': 'Deleted successfully'})
 
-# 2. 美食 API (新增 CRUD)
+# 2. 美食 API
 @app.route('/api/foods', methods=['GET'])
 def get_foods():
-    # ID 倒序，新加的在前面
     items = FoodItem.query.order_by(FoodItem.id.desc()).all()
     return jsonify([item.to_dict() for item in items])
 
@@ -212,13 +223,11 @@ def add_food():
 def update_food(id):
     item = FoodItem.query.get_or_404(id)
     data = request.get_json()
-    # 支援更新內容或切換愛心
     if 'name' in data: item.name = data['name']
     if 'category' in data: item.category = data['category']
     if 'description' in data: item.description = data['description']
     if 'link' in data: item.link = data['link']
     if 'is_favorite' in data: item.is_favorite = data['is_favorite']
-    
     db.session.commit()
     return jsonify(item.to_dict())
 
@@ -263,6 +272,26 @@ def delete_prep(id):
     db.session.delete(item)
     db.session.commit()
     return jsonify({'message': 'Deleted successfully'})
+
+# 4. 預算 API (New!)
+@app.route('/api/budget', methods=['GET'])
+def get_budget():
+    setting = TripSetting.query.filter_by(key='budget').first()
+    return jsonify({'value': setting.value if setting else '0'})
+
+@app.route('/api/budget', methods=['PUT'])
+def update_budget():
+    data = request.get_json()
+    new_val = str(data.get('value', 0))
+    
+    setting = TripSetting.query.filter_by(key='budget').first()
+    if setting:
+        setting.value = new_val
+    else:
+        db.session.add(TripSetting(key='budget', value=new_val))
+        
+    db.session.commit()
+    return jsonify({'value': new_val})
 
 with app.app_context():
     db.create_all()
