@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${newH}:${newM}`;
     }
 
-    // 1. 初始化 Chart.js (交通圖表)
+    // 1. 初始化 Chart.js
     const transportCtx = document.getElementById('transportChart').getContext('2d');
     new Chart(transportCtx, {
         type: 'bar',
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 2. 導覽列與頁籤邏輯
+    // 2. 導覽列與頁籤
     const navLinks = document.querySelectorAll('.nav-link');
     const pageSections = document.querySelectorAll('.page-section');
     const mobileMenuButton = document.getElementById('mobile-menu-button');
@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activateTab(btn);
     });
 
-    // 3. 搜尋功能邏輯
+    // 3. 搜尋功能
     const searchInput = document.getElementById('search-input');
 
     searchInput.addEventListener('input', (e) => {
@@ -132,21 +132,17 @@ document.addEventListener('DOMContentLoaded', () => {
         renderFoodGrid(filteredFoods);
     });
 
-    // 4. 資料讀取與渲染
-
-    // 行程部分
+    // 4. 行程讀取與渲染
     function fetchItinerary() {
         fetch('/api/itinerary')
             .then(response => response.json())
             .then(data => {
-                // 前端排序：Day -> Start Time
                 data.sort((a, b) => {
                     if (a.day !== b.day) return a.day.localeCompare(b.day);
                     const timeA = (a.time_range || '').split('-')[0].trim();
                     const timeB = (b.time_range || '').split('-')[0].trim();
                     return timeA.localeCompare(timeB);
                 });
-
                 globalItineraries = data;
                 renderTimeline(data);
             })
@@ -177,7 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ? `<a href="${item.map_link}" target="_blank" class="map-display text-cyan-600 hover:text-cyan-800 text-sm mt-1 inline-block font-medium">查看地圖 ↗</a>` 
             : '';
         
-        // 【美化點】這裡更新了按鈕的樣式，並去除了舊的編輯模式 HTML 區塊
         return `
         <div class="timeline-item p-4 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-shadow duration-200" data-id="${item.id}">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -204,63 +199,13 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>`;
     }
 
-    // 美食部分 (保持原樣)
-    function fetchFood() {
-        fetch('/api/foods')
-            .then(res => res.json())
-            .then(data => {
-                globalFoods = data;
-                renderFoodGrid(data);
-            });
-    }
-
-    function renderFoodGrid(items) {
-        const grid = document.getElementById('food-grid');
-        grid.innerHTML = '';
-
-        if (items.length === 0) {
-            grid.innerHTML = '<p class="text-gray-500 col-span-3 text-center py-10">沒有找到符合的美食...</p>';
-            return;
-        }
-
-        items.forEach(item => {
-            const labelText = item.category === 'seafood' ? '海鮮/正餐' : (item.category === 'snack' ? '在地小吃' : '甜點/飲料');
-            const labelColor = item.category === 'seafood' ? 'bg-cyan-100 text-cyan-800' : (item.category === 'snack' ? 'bg-amber-100 text-amber-800' : 'bg-pink-100 text-pink-800');
-            
-            const html = `
-            <div class="food-card bg-white rounded-lg shadow-lg overflow-hidden" data-category="${item.category}">
-                <div class="p-5">
-                    <span class="text-xs font-semibold ${labelColor} px-2 py-1 rounded-full">${labelText}</span>
-                    <h3 class="text-xl font-bold text-gray-900 mt-2">${item.name}</h3>
-                    <p class="text-gray-600 text-sm mt-1">${item.description}</p>
-                    <a href="${item.link}" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-3 inline-block">在 Google Maps 上查看 ↗</a>
-                </div>
-            </div>`;
-            grid.insertAdjacentHTML('beforeend', html);
-        });
-    }
-
-    document.getElementById('food-filters').addEventListener('click', (e) => {
-        if (e.target.matches('.filter-button')) {
-            const filter = e.target.dataset.filter;
-            document.querySelectorAll('#food-filters .filter-button').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            
-            const filteredByCat = filter === 'all' ? globalFoods : globalFoods.filter(x => x.category === filter);
-            renderFoodGrid(filteredByCat);
-        }
-    });
-
-    // ==========================================
-    // 5. 編輯/新增/刪除 互動邏輯 (重點更新)
-    // ==========================================
+    // 5. 行程 Modal & 互動
     const itemModal = document.getElementById('item-modal');
     const itemForm = document.getElementById('item-form');
     const modalTitle = document.getElementById('modal-title');
     const modalDayInput = document.getElementById('modal-day');
-    const modalIdInput = document.getElementById('modal-item-id'); // 隱藏的 ID 欄位
+    const modalIdInput = document.getElementById('modal-item-id');
 
-    // --- 時間連動邏輯 ---
     const startTimeInput = document.getElementById('modal-start-time');
     const endTimeInput = document.getElementById('modal-end-time');
     const add15Btn = document.getElementById('add-15m-btn');
@@ -279,34 +224,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 打開新增視窗
     document.querySelectorAll('.add-item-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            itemForm.reset(); // 清空表單
-            modalIdInput.value = ""; // 確保沒有 ID (代表新增模式)
+            itemForm.reset();
+            modalIdInput.value = "";
             modalDayInput.value = e.target.dataset.day;
-            modalTitle.innerText = "新增行程"; // 設定標題
+            modalTitle.innerText = "新增行程";
             itemModal.classList.remove('hidden');
         });
     });
 
     document.getElementById('modal-cancel').addEventListener('click', () => itemModal.classList.add('hidden'));
 
-    // 表單送出 (同時處理 新增 與 編輯)
     itemForm.addEventListener('submit', (e) => {
         e.preventDefault();
 
         const startTime = startTimeInput.value;
         const endTime = endTimeInput.value;
-
         if (endTime <= startTime) {
-            alert("⚠️ 結束時間必須晚於開始時間！\n請重新調整時間。");
+            alert("⚠️ 結束時間必須晚於開始時間！");
             return; 
         }
         const combinedTime = `${startTime} - ${endTime}`;
         
-        const id = modalIdInput.value; // 取得 ID
-        const isEditMode = !!id;       // 有 ID 就是編輯模式
+        const id = modalIdInput.value;
+        const isEditMode = !!id;
 
         const payload = {
             day: modalDayInput.value,
@@ -316,7 +258,6 @@ document.addEventListener('DOMContentLoaded', () => {
             map_link: document.getElementById('modal-map').value
         };
 
-        // 判斷是 POST (新增) 還是 PUT (修改)
         const url = isEditMode ? `/api/itinerary/${id}` : '/api/itinerary';
         const method = isEditMode ? 'PUT' : 'POST';
 
@@ -327,52 +268,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }).then(response => {
             if (response.ok) {
                 itemModal.classList.add('hidden');
-                fetchItinerary(); // 重新讀取畫面
+                fetchItinerary();
             } else {
-                alert("儲存失敗，請稍後再試");
+                alert("儲存失敗");
             }
         });
     });
 
-    // 點擊行程卡片上的按鈕 (編輯 / 刪除)
     const itinerarySection = document.getElementById('itinerary');
     itinerarySection.addEventListener('click', (e) => {
-        // 找到按鈕
         const editBtn = e.target.closest('.edit-btn');
         const deleteBtn = e.target.closest('.delete-btn');
         
-        // 找到該行資料的容器
         const timelineItem = e.target.closest('.timeline-item');
         if (!timelineItem) return;
         const id = timelineItem.dataset.id;
 
-        // --- 刪除功能 ---
         if (deleteBtn) {
             if (confirm('確定要刪除此行程嗎？')) {
                 fetch(`/api/itinerary/${id}`, { method: 'DELETE' })
                     .then(res => { 
                         if (res.ok) {
-                            // 從全域變數移除，避免搜尋時還跑出來
                             globalItineraries = globalItineraries.filter(x => x.id != id);
                             timelineItem.remove(); 
                         }
                     });
             }
-        } 
-        // --- 編輯功能 (打開 Modal 並填入資料) ---
-        else if (editBtn) {
-            // 1. 從全域變數找到這筆資料 (比去 DOM 抓更準確)
+        } else if (editBtn) {
             const itemData = globalItineraries.find(x => x.id == id);
             if (!itemData) return;
 
-            // 2. 填入表單
-            modalIdInput.value = itemData.id; // 設定 ID (重要！)
+            modalIdInput.value = itemData.id;
             modalDayInput.value = itemData.day;
             document.getElementById('modal-title-input').value = itemData.title;
             document.getElementById('modal-details').value = itemData.details || '';
             document.getElementById('modal-map').value = itemData.map_link || '';
             
-            // 3. 拆解時間字串 "09:00 - 10:00" -> 填入兩個 input
             if (itemData.time_range && itemData.time_range.includes('-')) {
                 const parts = itemData.time_range.split('-');
                 startTimeInput.value = parts[0].trim();
@@ -382,15 +313,157 @@ document.addEventListener('DOMContentLoaded', () => {
                 endTimeInput.value = "";
             }
 
-            // 4. 設定標題並顯示
             modalTitle.innerText = "編輯行程";
             itemModal.classList.remove('hidden');
         }
     });
 
-    // ==========================================
+    // --- 美食部分 (大升級) ---
+    
+    function fetchFood() {
+        fetch('/api/foods')
+            .then(res => res.json())
+            .then(data => {
+                globalFoods = data;
+                const currentFilter = document.querySelector('#food-filters .filter-button.active').dataset.filter;
+                renderFoodGrid(filterFoods(currentFilter));
+            });
+    }
+
+    function filterFoods(filterType) {
+        if (filterType === 'all') return globalFoods;
+        if (filterType === 'favorite') return globalFoods.filter(item => item.is_favorite);
+        return globalFoods.filter(item => item.category === filterType);
+    }
+
+    function renderFoodGrid(items) {
+        const grid = document.getElementById('food-grid');
+        grid.innerHTML = '';
+
+        if (items.length === 0) {
+            grid.innerHTML = '<p class="text-gray-500 col-span-full text-center py-10">這裡還沒有美食，快去新增吧！</p>';
+            return;
+        }
+
+        items.forEach(item => {
+            const labelText = item.category === 'seafood' ? '海鮮/正餐' : (item.category === 'snack' ? '在地小吃' : '甜點/飲料');
+            const labelColor = item.category === 'seafood' ? 'bg-cyan-100 text-cyan-800' : (item.category === 'snack' ? 'bg-amber-100 text-amber-800' : 'bg-pink-100 text-pink-800');
+            
+            const heartIcon = item.is_favorite 
+                ? `<svg class="w-6 h-6 text-red-500 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`
+                : `<svg class="w-6 h-6 text-gray-400 stroke-current fill-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
+
+            const mapLink = item.link 
+                ? `<a href="${item.link}" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-2 inline-block">Google Maps ↗</a>` 
+                : '';
+
+            const html = `
+            <div class="food-card bg-white rounded-lg shadow-lg overflow-hidden relative group" data-id="${item.id}">
+                <button onclick="toggleFavorite(${item.id}, ${!item.is_favorite})" class="absolute top-3 right-3 p-2 bg-white rounded-full shadow-sm hover:shadow-md transition transform hover:scale-110 z-10">
+                    ${heartIcon}
+                </button>
+
+                <div class="p-5 pb-16"> 
+                    <span class="text-xs font-semibold ${labelColor} px-2 py-1 rounded-full">${labelText}</span>
+                    <h3 class="text-xl font-bold text-gray-900 mt-2 mb-1">${item.name}</h3>
+                    <p class="text-gray-600 text-sm line-clamp-3">${item.description}</p>
+                    ${mapLink}
+                </div>
+
+                <div class="absolute bottom-0 left-0 w-full bg-gray-50 border-t border-gray-100 px-4 py-2 flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onclick="openEditFood(${item.id})" class="text-sm text-cyan-600 hover:text-cyan-800 font-medium px-2 py-1">編輯</button>
+                    <button onclick="deleteFood(${item.id})" class="text-sm text-red-500 hover:text-red-700 font-medium px-2 py-1">刪除</button>
+                </div>
+            </div>`;
+            grid.insertAdjacentHTML('beforeend', html);
+        });
+    }
+
+    document.getElementById('food-filters').addEventListener('click', (e) => {
+        if (e.target.matches('.filter-button')) {
+            const filter = e.target.dataset.filter;
+            document.querySelectorAll('#food-filters .filter-button').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            renderFoodGrid(filterFoods(filter));
+        }
+    });
+
+    // --- 美食互動邏輯 (掛載到 window) ---
+    
+    window.toggleFavorite = function(id, newStatus) {
+        fetch(`/api/foods/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_favorite: newStatus })
+        }).then(() => fetchFood());
+    };
+
+    window.deleteFood = function(id) {
+        if(confirm('確定要刪除這家美食嗎？')) {
+            fetch(`/api/foods/${id}`, { method: 'DELETE' })
+            .then(() => fetchFood());
+        }
+    };
+
+    const foodModal = document.getElementById('food-modal');
+    const foodForm = document.getElementById('food-form');
+    const foodIdInput = document.getElementById('food-id');
+    const foodTitle = document.getElementById('food-modal-title');
+
+    document.getElementById('add-food-btn').addEventListener('click', () => {
+        foodForm.reset();
+        foodIdInput.value = "";
+        foodTitle.innerText = "新增美食";
+        foodModal.classList.remove('hidden');
+    });
+
+    document.getElementById('food-cancel').addEventListener('click', () => foodModal.classList.add('hidden'));
+
+    window.openEditFood = function(id) {
+        const item = globalFoods.find(x => x.id === id);
+        if (!item) return;
+
+        foodIdInput.value = item.id;
+        document.getElementById('food-name').value = item.name;
+        document.getElementById('food-category').value = item.category;
+        document.getElementById('food-desc').value = item.description;
+        document.getElementById('food-link').value = item.link;
+        
+        foodTitle.innerText = "編輯美食";
+        foodModal.classList.remove('hidden');
+    };
+
+    foodForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const id = foodIdInput.value;
+        const isEdit = !!id;
+        
+        const payload = {
+            name: document.getElementById('food-name').value,
+            category: document.getElementById('food-category').value,
+            description: document.getElementById('food-desc').value,
+            link: document.getElementById('food-link').value
+        };
+
+        const url = isEdit ? `/api/foods/${id}` : '/api/foods';
+        const method = isEdit ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(res => {
+            if (res.ok) {
+                foodModal.classList.add('hidden');
+                fetchFood();
+            } else {
+                alert("儲存失敗");
+            }
+        });
+    });
+
     // 6. 行前準備清單邏輯
-    // ==========================================
     const prepGrid = document.getElementById('prep-grid');
     
     function loadPrep() {
@@ -456,7 +529,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // 新增清單 Modal 邏輯
     const prepModal = document.getElementById('prep-modal');
     const prepForm = document.getElementById('prep-form');
     

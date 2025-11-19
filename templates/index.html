@@ -152,24 +152,9 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr class="border-t">
-                                        <td class="px-3 py-2">標準車廂</td>
-                                        <td class="px-3 py-2">NT$ 1,530</td>
-                                        <td class="px-3 py-2">NT$ 765</td>
-                                        <td class="px-3 py-2">NT$ 1,450</td>
-                                    </tr>
-                                    <tr class="border-t">
-                                        <td class="px-3 py-2">商務車廂</td>
-                                        <td class="px-3 py-2">NT$ 2,500</td>
-                                        <td class="px-3 py-2">NT$ 1,250</td>
-                                        <td class="px-3 py-2">NT$ 2,375</td>
-                                    </tr>
-                                    <tr class="border-t">
-                                        <td class="px-3 py-2">自由座車廂</td>
-                                        <td class="px-3 py-2">NT$ 1,480</td>
-                                        <td class="px-3 py-2">NT$ 740</td>
-                                        <td class="px-3 py-2">-</td>
-                                    </tr>
+                                    <tr class="border-t"><td class="px-3 py-2">標準車廂</td><td class="px-3 py-2">NT$ 1,530</td><td class="px-3 py-2">NT$ 765</td><td class="px-3 py-2">NT$ 1,450</td></tr>
+                                    <tr class="border-t"><td class="px-3 py-2">商務車廂</td><td class="px-3 py-2">NT$ 2,500</td><td class="px-3 py-2">NT$ 1,250</td><td class="px-3 py-2">NT$ 2,375</td></tr>
+                                    <tr class="border-t"><td class="px-3 py-2">自由座車廂</td><td class="px-3 py-2">NT$ 1,480</td><td class="px-3 py-2">NT$ 740</td><td class="px-3 py-2">-</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -208,24 +193,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr class="border-t">
-                                    <td class="px-3 py-2">全票</td>
-                                    <td class="px-3 py-2">14 張</td>
-                                    <td class="px-3 py-2">NT$ 390</td>
-                                    <td class="px-3 py-2">NT$ 5,460</td>
-                                </tr>
-                                <tr class="border-t">
-                                    <td class="px-3 py-2">敬老 / 半票</td>
-                                    <td class="px-3 py-2">1 張</td>
-                                    <td class="px-3 py-2">NT$ 210</td>
-                                    <td class="px-3 py-2">NT$ 210</td>
-                                </tr>
-                                <tr class="border-t font-semibold">
-                                    <td class="px-3 py-2">總計</td>
-                                    <td class="px-3 py-2">-</td>
-                                    <td class="px-3 py-2">-</td>
-                                    <td class="px-3 py-2">NT$ 5,670</td>
-                                </tr>
+                                <tr class="border-t"><td class="px-3 py-2">全票</td><td class="px-3 py-2">14 張</td><td class="px-3 py-2">NT$ 390</td><td class="px-3 py-2">NT$ 5,460</td></tr>
+                                <tr class="border-t"><td class="px-3 py-2">敬老 / 半票</td><td class="px-3 py-2">1 張</td><td class="px-3 py-2">NT$ 210</td><td class="px-3 py-2">NT$ 210</td></tr>
+                                <tr class="border-t font-semibold"><td class="px-3 py-2">總計</td><td class="px-3 py-2">-</td><td class="px-3 py-2">-</td><td class="px-3 py-2">NT$ 5,670</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -250,13 +220,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr class="border-t">
-                                    <td class="px-3 py-2">機車（活力125）72 小時</td>
-                                    <td class="px-3 py-2">NT$ 1,100 / 台</td>
-                                    <td class="px-3 py-2">1 台</td>
-                                    <td class="px-3 py-2">NT$ 1,100</td>
-                                </tr>
-
+                                <tr class="border-t"><td class="px-3 py-2">機車（活力125）72 小時</td><td class="px-3 py-2">NT$ 1,100 / 台</td><td class="px-3 py-2">1 台</td><td class="px-3 py-2">NT$ 1,100</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -326,6 +290,10 @@
                     <button class="filter-button px-3 py-1 rounded-md" data-filter="seafood">海鮮/正餐</button>
                     <button class="filter-button px-3 py-1 rounded-md" data-filter="snack">在地小吃</button>
                     <button class="filter-button px-3 py-1 rounded-md" data-filter="dessert">甜點/飲料</button>
+                    <button class="filter-button px-3 py-1 rounded-md" data-filter="favorite">收藏</button>
+                </div>
+                <div>
+                    <button id="add-food-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded-md">＋ 新增美食</button>
                 </div>
             </div>
 
@@ -381,8 +349,8 @@
                     <input type="text" id="modal-map" class="mt-1 block w-full border rounded-md shadow-sm px-3 py-2">
                 </div>
                 <div class="flex justify-end space-x-3">
-                    <button type="button" id="modal-cancel" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-cyan-700">取消</button>
-                    <button type="submit" id="modal-save" class="bg-cyan-600 text-white px-4 py-2 rounded-md hover:bg-cyan-700">儲存</button>
+                    <button type="button" id="modal-cancel" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md">取消</button>
+                    <button type="submit" id="modal-save" class="bg-cyan-600 text-white px-4 py-2 rounded-md">儲存</button>
                 </div>
             </form>
         </div>
@@ -390,11 +358,39 @@
 
     <div id="food-modal" class="modal hidden">
         <div class="modal-content">
-            <h3 class="text-xl font-bold mb-4">新增美食</h3>
-            <p class="text-gray-500">目前尚未開放前端新增美食功能，請聯繫管理員。</p>
-            <div class="flex justify-end mt-4">
-                <button onclick="document.getElementById('food-modal').classList.add('hidden')" class="bg-gray-200 px-4 py-2 rounded-md">關閉</button>
-            </div>
+            <h3 class="text-2xl font-bold mb-4" id="food-modal-title">新增美食</h3>
+            <form id="food-form">
+                <input type="hidden" id="food-id">
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">餐廳名稱</label>
+                    <input type="text" id="food-name" class="mt-1 block w-full border rounded-md shadow-sm px-3 py-2" required>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">分類</label>
+                    <select id="food-category" class="mt-1 block w-full border rounded-md shadow-sm px-3 py-2">
+                        <option value="seafood">海鮮 / 正餐</option>
+                        <option value="snack">在地小吃</option>
+                        <option value="dessert">甜點 / 飲料</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">特色描述</label>
+                    <textarea id="food-desc" rows="3" class="mt-1 block w-full border rounded-md shadow-sm px-3 py-2" placeholder="例如：必點起司捲..."></textarea>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Google Maps 連結 (選填)</label>
+                    <input type="text" id="food-link" class="mt-1 block w-full border rounded-md shadow-sm px-3 py-2">
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="food-cancel" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md">取消</button>
+                    <button type="submit" class="bg-cyan-600 text-white px-4 py-2 rounded-md hover:bg-cyan-700">儲存</button>
+                </div>
+            </form>
         </div>
     </div>
 
