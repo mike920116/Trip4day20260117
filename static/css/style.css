@@ -1,0 +1,150 @@
+/* static/css/style.css */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+.page-section {
+    display: none;
+    animation: fadeIn 0.5s ease-in-out;
+}
+.page-section.active {
+    display: block;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.nav-link {
+    /* Tailwind apply syntax needs compilation, but since you use CDN, we keep this for reference or standard CSS fallback if Tailwind acts up. 
+       Note: Direct @apply works only in build steps. Since you use CDN, these classes are applied in HTML. 
+       I kept the custom classes that perform logic. */
+    cursor: pointer;
+}
+
+/* Tabs styling */
+#day-tabs {
+    display: flex;
+    gap: 0.5rem;
+    align-items: stretch;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.5rem;
+}
+.tab-button {
+    /* Tailwind classes are in HTML, adding specific overrides here */
+    background-clip: padding-box;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+.tab-button.active {
+    border-bottom: 3px solid #06b6d4; /* cyan-500 */
+}
+.tab-button:focus {
+    outline: 3px solid rgba(6,182,212,0.18);
+    outline-offset: 2px;
+}
+.tab-button:not(:focus-visible) {
+    outline: none;
+}
+.day-content {
+    display: none;
+}
+/* Make tabs appear as independent blocks on medium+ screens */
+@media (min-width: 768px) {
+    #day-tabs {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+    }
+    .tab-button {
+        display: block;
+        width: 100%;
+        text-align: center;
+        border-radius: 0.5rem;
+        background-color: white;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        border: 1px solid #e5e7eb;
+    }
+    .tab-button.active {
+        background-color: #ecfeff; /* subtle cyan */
+        border-color: #06b6d4;
+        box-shadow: 0 2px 6px rgba(6,182,212,0.06);
+    }
+}
+.day-content.active {
+    display: block;
+}
+.timeline-container {
+    position: relative;
+    padding-left: 2.5rem; 
+}
+.timeline-container::before {
+    content: '';
+    position: absolute;
+    left: 1.25rem;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: #e0e0e0; 
+    border-radius: 2px;
+}
+.timeline-item {
+    position: relative;
+    margin-bottom: 1.5rem; 
+}
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -2.0rem; 
+    top: 0.5rem; 
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background-color: #06b6d4; 
+    border: 2px solid white;
+    z-index: 10;
+}
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s;
+}
+.modal-content {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+.chart-container { 
+    position: relative; 
+    width: 100%; 
+    max-width: 600px; 
+    margin-left: auto; 
+    margin-right: auto; 
+    height: 300px;
+    max-height: 400px; 
+}
+@media (min-width: 768px) { 
+    .chart-container { 
+        height: 350px; 
+    } 
+}
+/* Food Map Styles */
+.filter-button{ border:1px solid transparent; }
+.filter-button.active{ background-color:#0ea5a4; color:#fff; }
+.food-card .card-actions{ padding:0.5rem 1rem; border-top:1px solid #eee; display:flex; justify-content:flex-end; gap:0.5rem; }
+#food-modal[data-open="true"]{ display:flex; }
+.fav-toggle{ background:transparent; border:none; padding:0.125rem; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.fav-toggle svg{ width:1.5rem; height:1.5rem; display:block; }
+.fav-toggle:focus{ outline:2px solid rgba(6,182,212,0.25); border-radius:0.25rem; }

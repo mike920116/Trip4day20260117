@@ -1,0 +1,176 @@
+import os
+from flask import Flask, render_template, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
+
+app = Flask(__name__)
+
+# 設定資料庫
+# 如果是在 Zeabur 上，會讀取環境變數 DATABASE_URL；本地開發則使用 diary.db
+# app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///diary.db')
+database_url = os.environ.get('DATABASE_URL', 'sqlite:///diary.db')
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+# --- 資料庫模型 (Schema) ---
+
+class ItineraryItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    day = db.Column(db.String(10), nullable=False)   # 例如: day1, day2
+    time_range = db.Column(db.String(50))            # 例如: 09:00 - 11:30
+    title = db.Column(db.String(100), nullable=False)
+    details = db.Column(db.Text)
+    map_link = db.Column(db.String(200))
+    
+    # 把物件轉成字典，方便傳給前端 JSON
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'day': self.day,
+            'time_range': self.time_range,
+            'title': self.title,
+            'details': self.details,
+            'map_link': self.map_link
+        }
+
+class FoodItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(50))              # 例如: seafood, snack
+    description = db.Column(db.Text)
+    link = db.Column(db.String(200))
+    is_favorite = db.Column(db.Boolean, default=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'category': self.category,
+            'description': self.description,
+            'link': self.link,
+            'is_favorite': self.is_favorite
+        }
+
+# --- 資料填充函式 (Seeding) ---
+# 只有當資料庫是空的時，才會自動寫入預設資料
+def seed_data():
+    if ItineraryItem.query.first():
+        return
+
+    print("資料庫是空的，正在寫入預設行程與美食資料...")
+    
+    # 1. 寫入行程資料
+    itineraries = [
+        # Day 1
+        ItineraryItem(day='day1', time_range='09:00 - 11:30', title='啟程', details='從出發地前往東港漁港。建議搭乘 11:30 前的船班。', map_link='https://www.google.com/maps/search/?api=1&query=東港漁港'),
+        ItineraryItem(day='day1', time_range='12:00 - 13:30', title='登島與午餐', details='抵達白沙尾碼頭 → 領機車 → 在碼頭附近享用在地午餐 (如：相思麵)。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球白沙尾碼頭'),
+        ItineraryItem(day='day1', time_range='13:30 - 14:30', title='Check-in 與採買', details='抵達「老船長民宿」Check-in → 騎車至琉球市區採買火鍋食材。', map_link='https://www.google.com/maps/search/?api=1&query=929屏東縣琉球鄉相埔路87-7號'),
+        ItineraryItem(day='day1', time_range='14:30 - 18:00', title='🌊 彈性水上活動 (首選)', details='【黃金時段 15:00-18:00】 浮潛 (看海龜) / 深潛 或 SUP 立槳 (可報名夕陽團)。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球+浮潛'),
+        ItineraryItem(day='day1', time_range='18:30 - 21:00', title='🏠 歡樂火鍋夜', details='在民宿煮火鍋、聚餐。', map_link=''),
+        ItineraryItem(day='day1', time_range='21:00 - 23:00', title='唱歌與娛樂', details='飯後在民宿公共空間唱歌或玩桌遊。', map_link=''),
+        
+        # Day 2
+        ItineraryItem(day='day2', time_range='08:00 - 10:30', title='🌊 彈性水上活動 (備案)', details='【黃金時段 08:00-11:00】 浮潛/深潛 或 透明獨木舟。若 Day 1 已玩，此時段可改為悠閒吃早餐。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球+透明獨木舟'),
+        ItineraryItem(day='day2', time_range='10:30 - 12:30', title='午餐與機動調整', details='享用午餐。若 Day 2 上午水活，午餐後開始環島。', map_link=''),
+        ItineraryItem(day='day2', time_range='12:30 - 16:30', title='🛵 北部精華環島', details='景點順序：花瓶岩 (拍照) → 美人洞 (看海) → 山豬溝 (步道) → 白燈塔 (看海)。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球花瓶岩'),
+        ItineraryItem(day='day2', time_range='16:30 - 17:45', title='🌅 落日亭賞夕陽', details='環島結束後，前往落日亭觀賞一月約 17:30 的日落。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球落日亭'),
+        ItineraryItem(day='day2', time_range='18:30 - 20:30', title='晚餐 (海鮮熱炒)', details='在琉球大街或中澳沙灘附近享用海鮮熱炒 (如：琉球番、大福羊肉)。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球+琉球番'),
+
+        # Day 3
+        ItineraryItem(day='day3', time_range='05:45 - 07:00', title='🌄 旭日亭看日出', details='早起挑戰！務必帶最厚保暖外套。一月日出約在 06:40 左右。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球旭日亭'),
+        ItineraryItem(day='day3', time_range='09:00 - 11:30', title='潮間帶探索', details='需配合當日潮汐時間預約導覽 (重要！)。地點：杉福、肚仔坪。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球杉福潮間帶'),
+        ItineraryItem(day='day3', time_range='11:30 - 13:00', title='午餐與休息', details='享用當地特色午餐 (如：鬼頭刀魚卵香腸、脆皮蛋餅)。', map_link=''),
+        ItineraryItem(day='day3', time_range='13:00 - 16:00', title='📸 南部景點與網美時光', details='平衡景點： 烏鬼洞 (需門票) → 厚石群礁 → 網美老木 (拍照打卡)。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球烏鬼洞'),
+        ItineraryItem(day='day3', time_range='18:30 - 20:30', title='晚餐 (小島最後一夜)', details='享受小島的最後一晚。可嘗試不同風味，如 BBQ 吃到飽。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球+BBQ'),
+        ItineraryItem(day='day3', time_range='20:30 - 22:00', title='夜間生態導覽', details='參加民宿或業者提供的夜遊活動，尋找陸蟹、觀星。', map_link=''),
+
+        # Day 4
+        ItineraryItem(day='day4', time_range='08:00 - 09:00', title='早餐', details='享用在小琉球的最後一頓早餐。', map_link=''),
+        ItineraryItem(day='day4', time_range='09:00 - 11:00', title='採買伴手禮與 Check-out', details='在琉球大街採買伴手禮 (如：麻花捲) → 回民宿整理行李、退房。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球+麻花捲'),
+        ItineraryItem(day='day4', time_range='11:30 - 12:00', title='搭船離島', details='歸還機車 → 白沙尾碼頭搭船 → 東港。', map_link='https://www.google.com/maps/search/?api=1&query=小琉球白沙尾碼頭'),
+        ItineraryItem(day='day4', time_range='12:30 - 賦歸', title='東港午餐與返程', details='可在東港享用海產 (如：華僑市場)，或直接搭乘交通工具返回台北。', map_link='https://www.google.com/maps/search/?api=1&query=東港華僑市場')
+    ]
+    
+    # 2. 寫入美食資料
+    foods = [
+        FoodItem(name='大福羊肉海鮮店', category='seafood', description='招牌羊肉爐、各式海鮮熱炒，在地人也推薦。', link='https://www.google.com/maps/search/?api=1&query=小琉球+大福羊肉海鮮店'),
+        FoodItem(name='琉球番壽司', category='seafood', description='想吃日式料理的好選擇，提供新鮮生魚片與創意壽司。', link='https://www.google.com/maps/search/?api=1&query=小琉球+琉球番壽司'),
+        FoodItem(name='相思麵', category='snack', description='古早味柴燒麵食，便宜大碗，是午餐的好選擇。', link='https://www.google.com/maps/search/?api=1&query=小琉球+相思麵'),
+        FoodItem(name='洪媽媽早餐店', category='snack', description='小琉球最知名的早餐店，必吃琉球粿、賓士包、蔥油條。', link='https://www.google.com/maps/search/?api=1&query=小琉球+洪媽媽早餐店'),
+        FoodItem(name='小琉球脆皮蛋餅', category='snack', description='口感獨特的脆皮蛋餅，有多種口味可選，適合當點心。', link='https://www.google.com/maps/search/?api=1&query=小琉球脆皮蛋餅'),
+        FoodItem(name='冰箱冰舖', category='dessert', description='知名的網美冰店，招牌是芒果雪花冰和海龜造型冰。', link='https://www.google.com/maps/search/?api=1&query=小琉球+冰箱冰舖'),
+        FoodItem(name='小本愛玉', category='dessert', description='主打天然手洗愛玉，海龜造型的愛玉凍超級可愛。', link='https://www.google.com/maps/search/?api=1&query=小琉球+小本愛玉'),
+        FoodItem(name='創12分層飲料', category='dessert', description='漸層飲料打卡聖地，好喝又好拍，適合環島時來一杯。', link='https://www.google.com/maps/search/?api=1&query=小琉球+創12')
+    ]
+
+    db.session.add_all(itineraries)
+    db.session.add_all(foods)
+    db.session.commit()
+    print("資料寫入完成！")
+
+# --- 路由 (Routes) ---
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+# API 1: 取得所有行程 (Read)
+@app.route('/api/itinerary', methods=['GET'])
+def get_itinerary():
+    items = ItineraryItem.query.order_by(ItineraryItem.id).all()
+    return jsonify([item.to_dict() for item in items])
+
+# API 2: 新增行程 (Create)
+@app.route('/api/itinerary', methods=['POST'])
+def add_itinerary():
+    data = request.get_json()
+    new_item = ItineraryItem(
+        day=data['day'],
+        time_range=data.get('time_range', ''),
+        title=data['title'],
+        details=data.get('details', ''),
+        map_link=data.get('map_link', '')
+    )
+    db.session.add(new_item)
+    db.session.commit()
+    return jsonify(new_item.to_dict()), 201
+
+# API 3: 刪除行程 (Delete)
+@app.route('/api/itinerary/<int:id>', methods=['DELETE'])
+def delete_itinerary(id):
+    item = ItineraryItem.query.get_or_404(id)
+    db.session.delete(item)
+    db.session.commit()
+    return jsonify({'message': 'Deleted successfully'})
+
+# API 4: 取得所有美食
+@app.route('/api/foods', methods=['GET'])
+def get_foods():
+    items = FoodItem.query.all()
+    return jsonify([item.to_dict() for item in items])
+
+# API 5: 修改行程 (Update) - 這是新增的修改功能
+@app.route('/api/itinerary/<int:id>', methods=['PUT'])
+def update_itinerary(id):
+    item = ItineraryItem.query.get_or_404(id)
+    data = request.get_json()
+    
+    # 更新欄位，如果前端沒傳該欄位，則維持原樣 (data.get 第二個參數為預設值)
+    item.title = data.get('title', item.title)
+    item.details = data.get('details', item.details)
+    item.time_range = data.get('time_range', item.time_range)
+    item.map_link = data.get('map_link', item.map_link)
+    
+    db.session.commit()
+    return jsonify(item.to_dict())
+
+# 初始化
+with app.app_context():
+    db.create_all() # 建立資料表結構
+    seed_data()     # 執行資料填充 (只有第一次會跑)
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
