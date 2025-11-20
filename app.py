@@ -25,7 +25,7 @@ if not database_url:
     else:
         # 3. 真的都沒有，代表是在您的「本地電腦」開發
         # ⚠️ 請務必確認這裡的密碼是您本地 MySQL Workbench 的密碼
-        database_url = 'mysql+pymysql://root:123456@localhost:3306/travel_db'
+        database_url = 'mysql+pymysql://root:NTUB@localhost:3306/travel_db'
 
 # 4. 針對 Zeabur PostgreSQL 的相容性修正 (保留以防萬一)
 if database_url and database_url.startswith("postgres://"):
