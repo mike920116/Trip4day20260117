@@ -5,12 +5,29 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
-# --- 資料庫連線設定 ---
-database_url = os.environ.get('DATABASE_URL')
-if not database_url:
-    # ⚠️ 請確認這裡的密碼是否正確
-    database_url = 'mysql+pymysql://root:NTUB@localhost:3306/travel_db'
+# --- 資料庫連線設定 (智慧型切換版) ---
+import os
 
+# 1. 嘗試取得完整的連線字串 (PostgreSQL 常見)
+database_url = os.environ.get('DATABASE_URL')
+
+# 2. 如果沒有 DATABASE_URL，嘗試從 Zeabur 的 MySQL 變數組裝
+if not database_url:
+    db_host = os.environ.get('MYSQL_HOST')
+    db_user = os.environ.get('MYSQL_USER')
+    db_password = os.environ.get('MYSQL_PASSWORD')
+    db_port = os.environ.get('MYSQL_PORT')
+    db_name = os.environ.get('MYSQL_DATABASE')
+
+    if db_host and db_user and db_password:
+        # 成功抓到 Zeabur MySQL 變數，組裝連線字串
+        database_url = f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    else:
+        # 3. 真的都沒有，代表是在您的「本地電腦」開發
+        # ⚠️ 請務必確認這裡的密碼是您本地 MySQL Workbench 的密碼
+        database_url = 'mysql+pymysql://root:NTUB@localhost:3306/travel_db'
+
+# 4. 針對 Zeabur PostgreSQL 的相容性修正 (保留以防萬一)
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
