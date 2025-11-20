@@ -361,8 +361,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? `<a href="${item.link}" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-2 inline-block">Google Maps ↗</a>` 
                 : '';
 
+            // 【修正點】移除 group-hover, opacity 等屬性，讓按鈕永久顯示
             const html = `
-            <div class="food-card bg-white rounded-lg shadow-lg overflow-hidden relative group" data-id="${item.id}">
+            <div class="food-card bg-white rounded-lg shadow-lg overflow-hidden relative" data-id="${item.id}">
                 <button onclick="toggleFavorite(${item.id}, ${!item.is_favorite})" class="absolute top-3 right-3 p-2 bg-white rounded-full shadow-sm hover:shadow-md transition transform hover:scale-110 z-10">
                     ${heartIcon}
                 </button>
@@ -374,9 +375,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${mapLink}
                 </div>
 
-                <div class="absolute bottom-0 left-0 w-full bg-gray-50 border-t border-gray-100 px-4 py-2 flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onclick="openEditFood(${item.id})" class="text-sm text-cyan-600 hover:text-cyan-800 font-medium px-2 py-1">編輯</button>
-                    <button onclick="deleteFood(${item.id})" class="text-sm text-red-500 hover:text-red-700 font-medium px-2 py-1">刪除</button>
+                <div class="absolute bottom-0 left-0 w-full bg-gray-50 border-t border-gray-100 px-4 py-3 flex justify-end gap-2">
+                    <button onclick="openEditFood(${item.id})" class="text-sm bg-white border border-cyan-500 text-cyan-600 hover:bg-cyan-50 font-medium px-3 py-1 rounded shadow-sm transition">編輯</button>
+                    <button onclick="deleteFood(${item.id})" class="text-sm bg-white border border-red-500 text-red-500 hover:bg-red-50 font-medium px-3 py-1 rounded shadow-sm transition">刪除</button>
                 </div>
             </div>`;
             grid.insertAdjacentHTML('beforeend', html);
