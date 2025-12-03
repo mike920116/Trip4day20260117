@@ -105,7 +105,7 @@ class TripSetting(db.Model):
 class ActivityOption(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
-    cost = db.Column(db.Integer, default=0)  # 新增費用欄位
+    cost = db.Column(db.String(50), default="費用未定")
     created_at = db.Column(db.DateTime, default=datetime.now)
 
     def to_dict(self):
@@ -307,7 +307,7 @@ def get_activities():
 def add_activity_option():
     data = request.get_json()
     name = data.get('name')
-    cost = int(data.get('cost', 0))
+    cost = data.get('cost', '費用未定') # 如果沒填就預設 "費用未定"
     if not name: return jsonify({'error': 'Name is required'}), 400
     
     new_option = ActivityOption(name=name, cost=cost)
@@ -326,7 +326,7 @@ def update_activity_option(id):
     old_cost = option.cost
     
     if 'name' in data: option.name = data['name']
-    if 'cost' in data: option.cost = int(data['cost'])
+    if 'cost' in data: option.cost = str(data['cost']) # 強制轉成文字存進去
     
     log_change('activity', 'UPDATE', id, f"修改揪團: {old_name}(${old_cost}) -> {option.name}(${option.cost})")
     db.session.commit()

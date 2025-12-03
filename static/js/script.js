@@ -651,8 +651,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const totalCount = act.votes.reduce((sum, v) => sum + v.count, 0);
             const colorClass = cardColors[index % cardColors.length];
             
-            // 費用顯示邏輯
-            const costHtml = act.cost > 0 
+            // 費用顯示邏輯 (修改版：支援文字顯示)
+            // 只要 cost 有值，且不是 '0' 或 0，且不是預設文字，就直接顯示內容
+            const isCostValid = act.cost && act.cost != 0 && act.cost !== '0' && act.cost !== '費用未定';
+            
+            const costHtml = isCostValid 
                 ? `<span class="text-sm font-medium opacity-80 bg-white/50 px-2 py-0.5 rounded">NT$ ${act.cost}/人</span>` 
                 : `<span class="text-xs opacity-60">費用未定</span>`;
 
@@ -671,7 +674,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="border rounded-xl shadow-sm hover:shadow-md transition-all duration-300 bg-white flex flex-col h-full group/card relative">
                     
                     <div class="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover/card:opacity-100 transition">
-                        <button onclick="openEditActivityModal(${act.id}, '${act.name}', ${act.cost})" class="bg-white/80 p-1.5 rounded text-blue-400 hover:text-blue-600 hover:bg-white shadow-sm" title="編輯活動">
+                        <button onclick="openEditActivityModal(${act.id}, '${act.name}', '${act.cost}')" class="bg-white/80 p-1.5 rounded text-blue-400 hover:text-blue-600 hover:bg-white shadow-sm" title="編輯活動">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                         </button>
                         <button onclick="deleteActivity(${act.id}, '${act.name}')" class="bg-white/80 p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-white shadow-sm" title="刪除此團">
@@ -720,7 +723,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('activity-id').value = ''; // 清空 ID 代表新增
         document.getElementById('activity-modal-title').innerText = '✨ 發起新揪團';
         document.getElementById('activity-name').value = '';
-        document.getElementById('activity-cost').value = 0;
+        document.getElementById('activity-cost').value = '';
         
         activityModal.classList.remove('hidden');
         activityModal.classList.add('flex');
@@ -749,7 +752,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const id = document.getElementById('activity-id').value;
         const name = document.getElementById('activity-name').value.trim();
-        const cost = parseInt(document.getElementById('activity-cost').value) || 0;
+        const cost = document.getElementById('activity-cost').value.trim();
         
         if(!name) return;
 
