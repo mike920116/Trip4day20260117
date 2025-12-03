@@ -2,4 +2,5 @@ Flask
 Flask-SQLAlchemy
 pymysql
 gunicorn
+Flask-Migrate
 # psycopg2-binary  <-- 如果 Zeabur 上想換成 MySQL，這行可以拿掉；若 Zeabur 維持 PostgreSQL 則保留
