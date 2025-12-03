@@ -617,12 +617,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 8. 活動揪團邏輯 (動態資料庫版) ---
+    // --- 8. 活動揪團邏輯 (含費用與編輯功能) ---
     const voteBoard = document.getElementById('vote-board');
     const voteModal = document.getElementById('vote-modal');
-    const createModal = document.getElementById('create-activity-modal');
-    const voteCountInput = document.getElementById('vote-count');
     
+    // 改名為通用 Modal
+    const activityModal = document.getElementById('activity-modal');
+    const activityForm = document.getElementById('activity-form');
+    
+    // 顏色輪播
     const cardColors = [
         'bg-cyan-50 text-cyan-800 border-cyan-200',
         'bg-amber-50 text-amber-800 border-amber-200', 
@@ -648,6 +651,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const totalCount = act.votes.reduce((sum, v) => sum + v.count, 0);
             const colorClass = cardColors[index % cardColors.length];
             
+            // 費用顯示邏輯
+            const costHtml = act.cost > 0 
+                ? `<span class="text-sm font-medium opacity-80 bg-white/50 px-2 py-0.5 rounded">NT$ ${act.cost}/人</span>` 
+                : `<span class="text-xs opacity-60">費用未定</span>`;
+
+            // 參加者列表
             const listHtml = act.votes.map(v => `
                 <div class="flex justify-between items-center text-sm mb-1 group border-b border-gray-100 last:border-0 pb-1 last:pb-0">
                     <span class="text-gray-700 font-medium">${v.name} 
@@ -657,16 +666,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `).join('');
 
+            // 卡片 HTML (增加編輯按鈕)
             const cardHtml = `
                 <div class="border rounded-xl shadow-sm hover:shadow-md transition-all duration-300 bg-white flex flex-col h-full group/card relative">
-                    <button onclick="deleteActivity(${act.id}, '${act.name}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-400 opacity-0 group-hover/card:opacity-100 transition z-10 p-1" title="刪除此團">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                    <div class="${colorClass} px-4 py-3 border-b flex justify-between items-center rounded-t-xl">
-                        <h4 class="font-bold text-lg truncate pr-6" title="${act.name}">${act.name}</h4>
-                        <span class="bg-white/80 px-2 py-0.5 rounded text-sm font-bold shadow-sm whitespace-nowrap">
-                            ${totalCount} 人
-                        </span>
+                    
+                    <div class="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover/card:opacity-100 transition">
+                        <button onclick="openEditActivityModal(${act.id}, '${act.name}', ${act.cost})" class="bg-white/80 p-1.5 rounded text-blue-400 hover:text-blue-600 hover:bg-white shadow-sm" title="編輯活動">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </button>
+                        <button onclick="deleteActivity(${act.id}, '${act.name}')" class="bg-white/80 p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-white shadow-sm" title="刪除此團">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+
+                    <div class="${colorClass} px-4 py-3 border-b flex flex-col justify-between rounded-t-xl min-h-[80px]">
+                        <div class="flex justify-between items-start">
+                            <h4 class="font-bold text-lg leading-tight pr-2" title="${act.name}">${act.name}</h4>
+                            <span class="bg-white/80 px-2 py-0.5 rounded text-sm font-bold shadow-sm whitespace-nowrap ml-2">
+                                ${totalCount} 人
+                            </span>
+                        </div>
+                        <div class="mt-2 text-right">
+                            ${costHtml}
+                        </div>
                     </div>
                     <div class="p-4 flex-1 bg-gray-50/30">
                         ${listHtml ? `<div class="space-y-1">${listHtml}</div>` : `<p class="text-gray-400 text-sm text-center italic py-2">目前無人報名</p>`}
@@ -682,7 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const addCardHtml = `
-            <button onclick="openCreateModal()" class="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-gray-400 hover:border-cyan-500 hover:text-cyan-600 hover:bg-cyan-50 transition min-h-[200px] h-full">
+            <button onclick="openCreateActivityModal()" class="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-gray-400 hover:border-cyan-500 hover:text-cyan-600 hover:bg-cyan-50 transition min-h-[200px] h-full">
                 <div class="w-12 h-12 rounded-full bg-gray-100 mb-3 flex items-center justify-center text-2xl group-hover:bg-white transition">＋</div>
                 <span class="font-medium">發起新揪團</span>
                 <span class="text-xs mt-1 opacity-70">沒有喜歡的行程嗎？<br>自己開一個！</span>
@@ -691,6 +713,71 @@ document.addEventListener('DOMContentLoaded', () => {
         voteBoard.insertAdjacentHTML('beforeend', addCardHtml);
     }
 
+    // --- Modal 控制 (新增/編輯) ---
+
+    // 1. 開啟 "新增"
+    window.openCreateActivityModal = function() {
+        document.getElementById('activity-id').value = ''; // 清空 ID 代表新增
+        document.getElementById('activity-modal-title').innerText = '✨ 發起新揪團';
+        document.getElementById('activity-name').value = '';
+        document.getElementById('activity-cost').value = 0;
+        
+        activityModal.classList.remove('hidden');
+        activityModal.classList.add('flex');
+        setTimeout(() => document.getElementById('activity-name').focus(), 100);
+    }
+
+    // 2. 開啟 "編輯"
+    window.openEditActivityModal = function(id, name, cost) {
+        document.getElementById('activity-id').value = id; // 填入 ID 代表編輯
+        document.getElementById('activity-modal-title').innerText = '✏️ 編輯活動資訊';
+        document.getElementById('activity-name').value = name;
+        document.getElementById('activity-cost').value = cost;
+        
+        activityModal.classList.remove('hidden');
+        activityModal.classList.add('flex');
+    }
+
+    window.closeActivityModal = function() {
+        activityModal.classList.add('hidden');
+        activityModal.classList.remove('flex');
+    }
+
+    // 3. 提交表單 (自動判斷 POST 或 PUT)
+    activityForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const id = document.getElementById('activity-id').value;
+        const name = document.getElementById('activity-name').value.trim();
+        const cost = parseInt(document.getElementById('activity-cost').value) || 0;
+        
+        if(!name) return;
+
+        const payload = { name: name, cost: cost };
+        
+        if (id) {
+            // 有 ID -> 編輯 (PUT)
+            fetch(`/api/activities/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(res => {
+                if(res.ok) { closeActivityModal(); loadVotes(); }
+            });
+        } else {
+            // 無 ID -> 新增 (POST)
+            fetch('/api/activities', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(res => {
+                if(res.ok) { closeActivityModal(); loadVotes(); }
+            });
+        }
+    });
+
+    // 4. 原本的報名 Modal 邏輯保持不變
+    const voteCountInput = document.getElementById('vote-count');
     window.openVoteModal = function(optionId, name) {
         document.getElementById('vote-activity-code').value = optionId;
         document.getElementById('vote-modal-title').innerText = `加入「${name}」`;
@@ -708,19 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if(document.getElementById('vote-cancel')) document.getElementById('vote-cancel').onclick = closeVoteModal;
     if(document.getElementById('vote-modal-bg')) document.getElementById('vote-modal-bg').onclick = closeVoteModal;
-
-    window.openCreateModal = function() {
-        document.getElementById('new-activity-name').value = '';
-        createModal.classList.remove('hidden');
-        createModal.classList.add('flex');
-        setTimeout(() => document.getElementById('new-activity-name').focus(), 100);
-    }
-
-    window.closeCreateModal = function() {
-        createModal.classList.add('hidden');
-        createModal.classList.remove('flex');
-    }
-
+    
     window.adjustVoteCount = function(delta) {
         let val = parseInt(voteCountInput.value) || 1;
         val += delta;
@@ -742,22 +817,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(payload)
             }).then(res => {
                 if(res.ok) { closeVoteModal(); loadVotes(); }
-            });
-        });
-    }
-
-    if(document.getElementById('create-activity-form')) {
-        document.getElementById('create-activity-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const name = document.getElementById('new-activity-name').value.trim();
-            if(!name) return;
-            
-            fetch('/api/activities', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name })
-            }).then(res => {
-                if(res.ok) { closeCreateModal(); loadVotes(); }
             });
         });
     }
