@@ -361,7 +361,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? `<a href="${item.link}" target="_blank" class="text-cyan-600 hover:text-cyan-800 text-sm mt-2 inline-block">Google Maps ↗</a>` 
                 : '';
 
-            // 【修正點】移除 group-hover, opacity 等屬性，讓按鈕永久顯示
             const html = `
             <div class="food-card bg-white rounded-lg shadow-lg overflow-hidden relative" data-id="${item.id}">
                 <button onclick="toggleFavorite(${item.id}, ${!item.is_favorite})" class="absolute top-3 right-3 p-2 bg-white rounded-full shadow-sm hover:shadow-md transition transform hover:scale-110 z-10">
@@ -562,7 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 7. 預算邏輯 (New! - 串接後端)
+    // 7. 預算邏輯
     const budgetDisplay = document.getElementById('budget-display');
     const budgetInput = document.getElementById('budget-input');
     const budgetEditBtn = document.getElementById('budget-edit');
@@ -618,10 +617,168 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // --- 8. 活動揪團邏輯 (動態資料庫版) ---
+    const voteBoard = document.getElementById('vote-board');
+    const voteModal = document.getElementById('vote-modal');
+    const createModal = document.getElementById('create-activity-modal');
+    const voteCountInput = document.getElementById('vote-count');
+    
+    const cardColors = [
+        'bg-cyan-50 text-cyan-800 border-cyan-200',
+        'bg-amber-50 text-amber-800 border-amber-200', 
+        'bg-emerald-50 text-emerald-800 border-emerald-200',
+        'bg-indigo-50 text-indigo-800 border-indigo-200',
+        'bg-rose-50 text-rose-800 border-rose-200',
+        'bg-violet-50 text-violet-800 border-violet-200'
+    ];
+
+    function loadVotes() {
+        fetch('/api/activities')
+            .then(res => res.json())
+            .then(data => {
+                renderVoteBoard(data);
+            });
+    }
+
+    function renderVoteBoard(activities) {
+        if(!voteBoard) return;
+        voteBoard.innerHTML = '';
+        
+        activities.forEach((act, index) => {
+            const totalCount = act.votes.reduce((sum, v) => sum + v.count, 0);
+            const colorClass = cardColors[index % cardColors.length];
+            
+            const listHtml = act.votes.map(v => `
+                <div class="flex justify-between items-center text-sm mb-1 group border-b border-gray-100 last:border-0 pb-1 last:pb-0">
+                    <span class="text-gray-700 font-medium">${v.name} 
+                        <span class="text-xs text-gray-500 bg-white border px-1.5 rounded-full ml-1 shadow-sm">+${v.count}</span>
+                    </span>
+                    <button onclick="deleteVote(${v.id})" class="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition px-1" title="刪除">×</button>
+                </div>
+            `).join('');
+
+            const cardHtml = `
+                <div class="border rounded-xl shadow-sm hover:shadow-md transition-all duration-300 bg-white flex flex-col h-full group/card relative">
+                    <button onclick="deleteActivity(${act.id}, '${act.name}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-400 opacity-0 group-hover/card:opacity-100 transition z-10 p-1" title="刪除此團">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                    <div class="${colorClass} px-4 py-3 border-b flex justify-between items-center rounded-t-xl">
+                        <h4 class="font-bold text-lg truncate pr-6" title="${act.name}">${act.name}</h4>
+                        <span class="bg-white/80 px-2 py-0.5 rounded text-sm font-bold shadow-sm whitespace-nowrap">
+                            ${totalCount} 人
+                        </span>
+                    </div>
+                    <div class="p-4 flex-1 bg-gray-50/30">
+                        ${listHtml ? `<div class="space-y-1">${listHtml}</div>` : `<p class="text-gray-400 text-sm text-center italic py-2">目前無人報名</p>`}
+                    </div>
+                    <div class="p-3 border-t bg-white rounded-b-xl">
+                        <button onclick="openVoteModal(${act.id}, '${act.name}')" class="w-full py-2 rounded-lg border border-dashed border-gray-300 text-gray-500 hover:border-cyan-500 hover:text-cyan-600 hover:bg-cyan-50 transition flex items-center justify-center gap-1 text-sm font-medium">
+                            <span>+</span> 我要加入
+                        </button>
+                    </div>
+                </div>
+            `;
+            voteBoard.insertAdjacentHTML('beforeend', cardHtml);
+        });
+
+        const addCardHtml = `
+            <button onclick="openCreateModal()" class="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-gray-400 hover:border-cyan-500 hover:text-cyan-600 hover:bg-cyan-50 transition min-h-[200px] h-full">
+                <div class="w-12 h-12 rounded-full bg-gray-100 mb-3 flex items-center justify-center text-2xl group-hover:bg-white transition">＋</div>
+                <span class="font-medium">發起新揪團</span>
+                <span class="text-xs mt-1 opacity-70">沒有喜歡的行程嗎？<br>自己開一個！</span>
+            </button>
+        `;
+        voteBoard.insertAdjacentHTML('beforeend', addCardHtml);
+    }
+
+    window.openVoteModal = function(optionId, name) {
+        document.getElementById('vote-activity-code').value = optionId;
+        document.getElementById('vote-modal-title').innerText = `加入「${name}」`;
+        document.getElementById('vote-name').value = '';
+        document.getElementById('vote-count').value = 1;
+        voteModal.classList.remove('hidden');
+        voteModal.classList.add('flex');
+        setTimeout(() => document.getElementById('vote-name').focus(), 100);
+    };
+    
+    window.closeVoteModal = function() {
+        voteModal.classList.add('hidden');
+        voteModal.classList.remove('flex');
+    };
+    
+    if(document.getElementById('vote-cancel')) document.getElementById('vote-cancel').onclick = closeVoteModal;
+    if(document.getElementById('vote-modal-bg')) document.getElementById('vote-modal-bg').onclick = closeVoteModal;
+
+    window.openCreateModal = function() {
+        document.getElementById('new-activity-name').value = '';
+        createModal.classList.remove('hidden');
+        createModal.classList.add('flex');
+        setTimeout(() => document.getElementById('new-activity-name').focus(), 100);
+    }
+
+    window.closeCreateModal = function() {
+        createModal.classList.add('hidden');
+        createModal.classList.remove('flex');
+    }
+
+    window.adjustVoteCount = function(delta) {
+        let val = parseInt(voteCountInput.value) || 1;
+        val += delta;
+        if (val < 1) val = 1;
+        voteCountInput.value = val;
+    };
+
+    if(document.getElementById('vote-form')) {
+        document.getElementById('vote-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const payload = {
+                option_id: document.getElementById('vote-activity-code').value,
+                name: document.getElementById('vote-name').value,
+                count: parseInt(document.getElementById('vote-count').value)
+            };
+            fetch('/api/votes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(res => {
+                if(res.ok) { closeVoteModal(); loadVotes(); }
+            });
+        });
+    }
+
+    if(document.getElementById('create-activity-form')) {
+        document.getElementById('create-activity-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('new-activity-name').value.trim();
+            if(!name) return;
+            
+            fetch('/api/activities', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name })
+            }).then(res => {
+                if(res.ok) { closeCreateModal(); loadVotes(); }
+            });
+        });
+    }
+
+    window.deleteVote = function(id) {
+        if(confirm('確定要刪除這筆報名資料嗎？')) {
+            fetch(`/api/votes/${id}`, { method: 'DELETE' }).then(() => loadVotes());
+        }
+    };
+
+    window.deleteActivity = function(id, name) {
+        if(confirm(`確定要刪除「${name}」這個揪團嗎？\n裡面的報名資料也會一併刪除喔！`)) {
+            fetch(`/api/activities/${id}`, { method: 'DELETE' }).then(() => loadVotes());
+        }
+    };
+
     // 啟動
     loadBudget();
     loadPrep(); 
     fetchItinerary();
     fetchFood();
+    loadVotes();
     switchPage('overview');
 });

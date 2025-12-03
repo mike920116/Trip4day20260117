@@ -124,6 +124,16 @@
                     </table>
                 </div>
             </div>
+
+            <div class="mt-8">
+                <h3 class="text-2xl font-bold text-cyan-800 mb-6 flex items-center">
+                    🌊 水上活動揪團統計
+                    <span class="ml-3 text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">即時更新</span>
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="vote-board">
+                    </div>
+            </div>
         </section>
 
         <section id="transport" class="page-section hidden">
@@ -450,6 +460,49 @@
                 <div class="flex justify-end space-x-3">
                     <button type="button" id="prep-modal-cancel" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">取消</button>
                     <button type="submit" class="bg-cyan-600 text-white px-4 py-2 rounded-md hover:bg-cyan-700">新增</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="vote-modal" class="fixed inset-0 hidden items-center justify-center z-[60]">
+        <div class="absolute inset-0 bg-black opacity-40" id="vote-modal-bg"></div>
+        <div class="bg-white rounded-lg p-6 z-10 w-full max-w-sm mx-4 shadow-xl transform transition-all">
+            <h3 class="text-xl font-bold mb-4 text-cyan-800" id="vote-modal-title">加入揪團</h3>
+            <form id="vote-form" class="space-y-4">
+                <input type="hidden" id="vote-activity-code">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">您的暱稱</label>
+                    <input type="text" id="vote-name" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="例如：小明" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">報名人數 (含自己)</label>
+                    <div class="flex items-center space-x-3">
+                        <button type="button" class="w-10 h-10 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-bold text-lg" onclick="adjustVoteCount(-1)">-</button>
+                        <input type="number" id="vote-count" value="1" min="1" class="w-20 text-center border-gray-300 border-b-2 focus:outline-none text-xl font-bold" readonly>
+                        <button type="button" class="w-10 h-10 rounded-full bg-cyan-100 text-cyan-700 hover:bg-cyan-200 font-bold text-lg" onclick="adjustVoteCount(1)">+</button>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2 mt-4">
+                    <button type="button" id="vote-cancel" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200">取消</button>
+                    <button type="submit" class="px-4 py-2 rounded-md bg-cyan-600 text-white hover:bg-cyan-700 shadow-sm">確認加入</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="create-activity-modal" class="fixed inset-0 hidden items-center justify-center z-[60]">
+        <div class="absolute inset-0 bg-black opacity-40" onclick="closeCreateModal()"></div>
+        <div class="bg-white rounded-lg p-6 z-10 w-full max-w-sm mx-4 shadow-xl">
+            <h3 class="text-xl font-bold mb-4 text-cyan-800">✨ 發起新揪團</h3>
+            <form id="create-activity-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">活動名稱</label>
+                    <input type="text" id="new-activity-name" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="例如：夜釣小管、自由潛水..." required>
+                </div>
+                <div class="flex justify-end space-x-2 mt-4">
+                    <button type="button" onclick="closeCreateModal()" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200">取消</button>
+                    <button type="submit" class="px-4 py-2 rounded-md bg-cyan-600 text-white hover:bg-cyan-700 shadow-sm">建立</button>
                 </div>
             </form>
         </div>
